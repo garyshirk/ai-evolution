@@ -152,7 +152,15 @@ class StateAndClockTests(unittest.TestCase):
         # Go beyond the future lifespan: death is deliberately not implemented.
         simulation.advance(3000)
         after = simulation.snapshot()
-        self.assertEqual(after.organisms, before.organisms)
+        # Milestone B adds movement; all other biological state stays fixed.
+        for identifier, org in after.organisms.items():
+            original = before.organisms[identifier]
+            self.assertEqual(org.energy, original.energy)
+            self.assertEqual(org.traits, original.traits)
+            self.assertEqual(org.parent_id, original.parent_id)
+            self.assertEqual(org.generation, original.generation)
+            self.assertEqual(org.offspring_count, original.offspring_count)
+        self.assertEqual(set(after.organisms), set(before.organisms))
         self.assertEqual(after.food, before.food)
         self.assertEqual(after.next_organism_id, before.next_organism_id)
         self.assertEqual(after.next_food_id, before.next_food_id)

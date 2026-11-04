@@ -10,15 +10,23 @@ from .experiments.r1 import Simulation, SimulationConfig
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="AI Evolution — Milestone A foundation")
+    parser = argparse.ArgumentParser(description="AI Evolution — Milestone B (includes Milestone A foundation)")
     commands = parser.add_subparsers(dest="command", required=True)
-    headless = commands.add_parser("headless", help="Initialize and advance the clock; no biology yet")
+    serve = commands.add_parser("serve", help="Launch the local browser interface")
+    serve.add_argument("--port", type=int, default=5000)
+    headless = commands.add_parser("headless", help="Run seeded random search; no food interactions yet")
     headless.add_argument("--seed", type=int, default=0)
     headless.add_argument("--steps", type=int, default=0)
     headless.add_argument("--population", type=int, default=50)
     headless.add_argument("--food", type=int, default=200)
     headless.add_argument("--dt", type=float, default=0.1)
     args = parser.parse_args(argv)
+    if args.command == "serve":
+        from .web.app import create_app
+        if not 1 <= args.port <= 65535:
+            parser.error("port must be between 1 and 65535")
+        create_app().run(host="127.0.0.1", port=args.port, debug=False)
+        return 0
     try:
         config = SimulationConfig(
             initial_population=args.population, initial_food=args.food, dt=args.dt
@@ -29,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(error))
     state = simulation.snapshot()
     print(json.dumps({
-        "milestone": "A", "biology_implemented": False,
+        "milestone": "B", "biology_implemented": False, "search_movement_implemented": True,
         "engine_version": __version__, "python_version": platform.python_version(),
         "seed": simulation.seed, "parameters": asdict(config),
         "requested_steps": args.steps, "completed_steps": completed,

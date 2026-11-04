@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Evolution · R1</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="module" src="/static/controls.js"></script>
+</head>
+<body>
+  <header><div class="eyebrow">AI EVOLUTION / EXPERIMENT 01</div><h1>A world in motion</h1>
+    <p>R1 · Milestone B — random search only. Food is inert; energy is constant. No reproduction or death.</p></header>
+  <main>
+    <section class="toolbar" aria-label="Simulation controls">
+      <button id="start">Start / Resume</button><button id="pause">Pause</button>
+      <button id="step">Single step</button><button id="reset">Reset</button>
+      <label>Playback <select id="speed"><option value="0.25">0.25×</option><option value="1" selected>1×</option><option value="5">5×</option><option value="20">20×</option></select></label>
+      <label>Seed for next reset <input id="seed" value="0" inputmode="numeric" size="10"></label>
+      <span id="status" role="status">Connecting…</span>
+    </section>
+    <p id="error" role="alert" hidden></p>
+    <section class="metrics" id="metrics" aria-label="Simulation information"></section>
+    <div class="workspace">
+      <section class="world-panel"><div class="world-heading"><span>THE ENVIRONMENT</span><span><i class="org-key"></i> Organism <i class="food-key"></i> Food</span></div>
+        <canvas id="world" aria-label="Simulation world. Click an organism to inspect it."></canvas>
+        <p class="hint">Click an organism to inspect. Repeated clicks cycle through overlapping organisms; the list also selects any organism.</p>
+      </section>
+      <aside><h2>Organism inspector</h2>
+        <label>Select organism <select id="organism"><option value="">None selected</option></select></label>
+        <label class="check"><input id="vision" type="checkbox" checked> Show selected vision radius</label>
+        <dl id="inspection"><dt>No selection</dt><dd>Click a circle in the world.</dd></dl>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

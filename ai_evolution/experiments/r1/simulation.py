@@ -1,4 +1,4 @@
-"""Seeded initialization and fixed-step clock; biological rules are deferred."""
+"""Seeded initialization and fixed-step searching; other biology is deferred."""
 
 from copy import deepcopy
 import math
@@ -6,6 +6,7 @@ import random
 
 from .config import SimulationConfig
 from .models import Food, Organism, Position, Traits, WorldState
+from .movement import search
 
 
 class Simulation:
@@ -68,9 +69,11 @@ class Simulation:
         )
 
     def step(self) -> bool:
-        """Advance one clock tick only; return False for an empty experiment."""
+        """Advance one search tick; return False for an empty experiment."""
         if self._state.is_terminal:
             return False
+        for identifier in sorted(self._state.organisms):
+            search(self._state.organisms[identifier], self.config, self._rng)
         self._state.step_count += 1
         return True
 

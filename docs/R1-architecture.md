@@ -1,7 +1,7 @@
 # R1 software architecture
 
 Date: November 4, 2026  
-Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestone A (engine foundation) is authorized; later milestones require separate authorization.
+Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A and B are authorized; Milestone C and later require separate authorization.
 
 ## 1. Scope and decision authority
 
@@ -310,7 +310,9 @@ Planned commands after implementation:
 5. **Experiment reporting:** advanced controls, charts, exports, trait spreads/histograms, API replay tests and manual browser smoke test.
 6. **Calibration and acceptance:** multi-seed reports, performance measurements, late-run checks, documented baseline and limitations.
 
-Keep every stage runnable and testable. Milestone A is authorized. Do not begin Milestone B or later milestones without authorization.
+Keep every stage runnable and testable. Milestones A and B are authorized. Do not begin Milestone C or later milestones without authorization.
+
+Milestone B implementation note: random search uses an analytic axis-folding calculation for reflected endpoints and outgoing headings, supporting multiple wall hits per tick. No swept encounters or interactions are implemented yet. Browser playback requests explicit bounded batches through the Flask adapter; it does not introduce a second physics loop. Canvas displays authoritative snapshots without interpolation. The server has no autonomous stepping thread, so only accepted advance/single-step requests move simulated time.
 
 ## 12. Approved conventions and implementation concerns
 

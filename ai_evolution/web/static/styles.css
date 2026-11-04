@@ -1,0 +1,29 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; color: #183d37; background: #f2f4ef; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 28px clamp(16px, 4vw, 64px); }
+header, main { max-width: 1440px; margin: auto; }
+.eyebrow { font-size: 11px; letter-spacing: .18em; font-weight: 700; }
+h1 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -.04em; margin: 8px 0; }
+header p, .hint { color: #57716b; font-size: 13px; line-height: 1.6; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 24px; }
+button, select, input { font: inherit; border: 1px solid #b5c5bc; border-radius: 5px; padding: 9px 12px; color: inherit; background: white; }
+button { cursor: pointer; } button:hover { background: #e1ece4; }
+button:disabled { opacity: .45; cursor: default; }
+#start { background: #245d4b; color: white; border-color: #245d4b; }
+label { display: grid; gap: 5px; font-size: 12px; }
+#status { margin: auto 0 10px auto; font-size: 13px; }
+.metrics { display: flex; flex-wrap: wrap; gap: 28px; padding: 22px 0; }
+.metric { display: grid; gap: 4px; font-size: 11px; color: #57716b; text-transform: uppercase; letter-spacing: .07em; }
+.metric strong { font-size: 20px; font-weight: 600; color: #183d37; letter-spacing: 0; text-transform: none; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; align-items: start; }
+.world-panel, aside { border: 1px solid #cbd6cc; border-radius: 8px; background: #fffefa; padding: 16px; }
+.world-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 10px; letter-spacing: .08em; margin-bottom: 14px; }
+canvas { display: block; width: 100%; border: 2px solid #648479; background: #f6f8f1; cursor: crosshair; }
+i { display: inline-block; border-radius: 50%; margin: 0 4px 0 8px; }
+.org-key { width: 8px; height: 8px; background: #287f99; }.food-key { width: 5px; height: 5px; background: #a97026; }
+.hint { margin-bottom: 0; font-size: 11px; } h2 { margin: 0 0 20px; font-size: 17px; }
+.check { display: flex; align-items: center; margin-top: 16px; }.check input { margin: 0; }
+dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 8px; font-size: 12px; padding-top: 14px; border-top: 1px solid #e0e6dd; }
+dt { color: #57716b; } dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#error { background: #fff0e8; color: #862e17; padding: 12px; border-radius: 5px; }
+@media (max-width: 800px) { .workspace { grid-template-columns: 1fr; } .metrics { gap: 18px; } #status { margin-left: 0; } }
