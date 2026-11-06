@@ -1,6 +1,6 @@
 """Single local run with explicit advancement; no background physics thread."""
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from threading import Lock
 from uuid import uuid4
 
@@ -21,7 +21,7 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
         state = simulation.snapshot()
         return {
             "run_id": run_id, "running": running, "seed": simulation.seed,
-            "engine_version": __version__, "milestone": "B",
+            "engine_version": __version__, "milestone": "C",
             "parameters": asdict(simulation.config), "state": asdict(state),
             "time": state.time, "is_terminal": state.is_terminal,
         }
@@ -53,11 +53,21 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
                     or data["expected_step"] != current.step_count):
                 return jsonify(error="Stale run or step; refresh current state"), 409
             action = data.get("action")
+            if action != "reset" and "parameters" in data:
+                return jsonify(error="Model parameters can change only on reset"), 400
             if action == "reset":
                 seed_value = data.get("seed", simulation.seed)
                 if type(seed_value) is not int or abs(seed_value) > 2**53 - 1:
                     return jsonify(error="Seed must be a JavaScript-safe integer"), 400
-                simulation = Simulation(simulation.config, seed=seed_value)
+                updates = data.get("parameters", {})
+                allowed = {"food_spawn_rate", "movement_cost", "vision_cost"}
+                if not isinstance(updates, dict) or not updates.keys() <= allowed:
+                    return jsonify(error="Unsupported reset parameters"), 400
+                try:
+                    updated_config = replace(simulation.config, **updates)
+                except ValueError as error:
+                    return jsonify(error=str(error)), 400
+                simulation = Simulation(updated_config, seed=seed_value)
                 run_id = uuid4().hex
                 running = False
             elif action == "start":

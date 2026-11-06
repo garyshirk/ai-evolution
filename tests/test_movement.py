@@ -92,7 +92,8 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(first.snapshot(), second.snapshot())
 
     def test_overlapping_organisms_do_not_interact(self):
-        simulation = Simulation(SimulationConfig(initial_population=2), seed=2)
+        simulation = Simulation(SimulationConfig(initial_population=2, initial_food=0,
+                                food_spawn_rate=0), seed=2)
         for org in simulation._state.organisms.values():
             org.position = Position(50, 50)
             org.heading = 0
@@ -104,7 +105,11 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(organisms[0].position, Position(50.2, 50))
 
     def test_long_run_stays_in_world_without_changing_food_or_energy(self):
-        simulation = Simulation(SimulationConfig(world_width=2, world_height=3), seed=8)
+        simulation = Simulation(SimulationConfig(
+            world_width=2, world_height=3, initial_population=3, initial_food=0,
+            food_spawn_rate=0, baseline_cost=0, vision_cost=0, movement_cost=0,
+            max_lifespan=1e9,
+        ), seed=8)
         original = simulation.snapshot()
         simulation.advance(1000)
         state = simulation.snapshot()

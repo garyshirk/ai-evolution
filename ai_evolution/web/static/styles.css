@@ -26,4 +26,6 @@ i { display: inline-block; border-radius: 50%; margin: 0 4px 0 8px; }
 dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 8px; font-size: 12px; padding-top: 14px; border-top: 1px solid #e0e6dd; }
 dt { color: #57716b; } dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 #error { background: #fff0e8; color: #862e17; padding: 12px; border-radius: 5px; }
+#extinction { background: #f4e6d2; padding: 12px; border-radius: 5px; }
+input[type="number"] { width: 110px; }
 @media (max-width: 800px) { .workspace { grid-template-columns: 1fr; } .metrics { gap: 18px; } #status { margin-left: 0; } }

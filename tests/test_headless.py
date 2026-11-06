@@ -28,10 +28,11 @@ class HeadlessTests(unittest.TestCase):
         self.assertEqual(report["completed_steps"], 12)
         self.assertEqual(report["state"]["step_count"], state.step_count)
         self.assertEqual(report["time"], state.time)
-        self.assertFalse(report["biology_implemented"])
+        self.assertTrue(report["biology_implemented"])
+        self.assertFalse(report["reproduction_implemented"])
         self.assertFalse(report["is_terminal"])
         self.assertEqual(report["state"]["organisms"]["1"]["energy"], state.organisms[1].energy)
-        self.assertEqual(len(report["state"]["food"]), 200)
+        self.assertEqual(len(report["state"]["food"]), len(state.food))
         self.assertIn("engine_version", report)
         self.assertIn("python_version", report)
         self.assertEqual(report["parameters"]["dt"], 0.1)
@@ -45,7 +46,7 @@ class HeadlessTests(unittest.TestCase):
 
     def test_cli_custom_settings(self):
         result = self.run_cli("headless", "--population", "2", "--food", "0",
-                              "--dt", "0.25", "--steps", "4")
+                              "--dt", "0.25", "--steps", "4", "--food-rate", "0")
         self.assertEqual(result.returncode, 0, result.stderr)
         report = json.loads(result.stdout)
         self.assertEqual(len(report["state"]["organisms"]), 2)

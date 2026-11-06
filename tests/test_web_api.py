@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import asdict
 
 from ai_evolution.experiments.r1 import Simulation, SimulationConfig
 from ai_evolution.web.app import create_app
@@ -21,7 +22,7 @@ class WebTests(unittest.TestCase):
     def test_page_and_assets(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Milestone B", response.data)
+        self.assertIn(b"Milestone C", response.data)
         response.close()
         for name in ("controls.js", "api.js", "world.js", "styles.css"):
             response = self.client.get(f"/static/{name}")
@@ -110,6 +111,42 @@ class WebTests(unittest.TestCase):
         self.assertTrue(self.state["is_terminal"])
         self.control("step")
         self.assertEqual(self.state["state"]["step_count"], 0)
+
+    def test_biological_parameters_only_apply_on_reset(self):
+        original = self.state
+        self.assertEqual(self.control("step", parameters={"movement_cost": 2}).status_code, 400)
+        self.assertEqual(self.state, original)
+        self.assertEqual(self.control("reset", parameters={"food_spawn_rate": -1}).status_code, 400)
+        self.assertEqual(self.client.get("/api/state").get_json(), original)
+        self.control("reset", parameters={"food_spawn_rate": 0, "movement_cost": 2, "vision_cost": 3})
+        self.assertEqual(self.state["parameters"]["movement_cost"], 2)
+        self.assertEqual(self.state["parameters"]["vision_cost"], 3)
+        self.assertEqual(self.state["parameters"]["food_spawn_rate"], 0)
+        self.assertEqual(self.state["state"]["step_count"], 0)
+
+    def test_extinction_pauses_preserves_records_and_stops_batch(self):
+        config = SimulationConfig(initial_population=2, initial_food=0, food_spawn_rate=0,
+                                  max_lifespan=0.15)
+        self.client = create_app(config, seed=42).test_client()
+        self.state = self.client.get("/api/state").get_json()
+        self.control("start")
+        self.control("advance", steps=20)
+        self.assertTrue(self.state["is_terminal"])
+        self.assertFalse(self.state["running"])
+        self.assertEqual(self.state["time"], 0.15)
+        self.assertEqual(self.state["state"]["step_count"], 2)
+        self.assertEqual(self.state["state"]["statistics"]["age_deaths"], 2)
+        self.assertEqual(len(self.state["state"]["deaths"]), 2)
+        expected = Simulation(config, seed=42)
+        expected.advance(20)
+        import json
+        self.assertEqual(self.state["state"], json.loads(json.dumps(asdict(expected.snapshot()))))
+        final = self.state
+        self.control("step")
+        self.assertEqual(self.state["state"], final["state"])
+        self.control("reset")
+        self.assertFalse(self.state["is_terminal"])
+        self.assertEqual(self.state["state"]["deaths"], {})
 
 
 if __name__ == "__main__":

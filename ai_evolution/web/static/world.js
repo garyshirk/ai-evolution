@@ -24,7 +24,7 @@ export class WorldView {
     ctx.clearRect(0, 0, config.world_width, config.world_height);
     const unit = config.world_width / rect.width;
     const circle = (x, y, radius, fill) => { ctx.beginPath(); ctx.arc(x, y, radius, 0, 2 * Math.PI); ctx.fillStyle = fill; ctx.fill(); };
-    const selected = state.organisms[this.selected];
+    const selected = state.organisms[this.selected] || state.deaths[this.selected]?.organism;
     if (selected && this.showVision) circle(selected.position.x, selected.position.y, selected.traits.vision_radius, "#287f9918");
     for (const food of Object.values(state.food)) circle(food.position.x, food.position.y, 1.8 * unit, "#a97026");
     for (const org of Object.values(state.organisms)) {
@@ -33,6 +33,12 @@ export class WorldView {
         ctx.beginPath(); ctx.arc(org.position.x, org.position.y, 7 * unit, 0, 2 * Math.PI);
         ctx.lineWidth = 2 * unit; ctx.strokeStyle = "#183d37"; ctx.stroke();
       }
+    }
+    if (selected && state.deaths[this.selected]) {
+      const {x, y} = selected.position;
+      ctx.strokeStyle = "#862e17"; ctx.lineWidth = 2 * unit;
+      ctx.beginPath(); ctx.moveTo(x - 5 * unit, y - 5 * unit); ctx.lineTo(x + 5 * unit, y + 5 * unit);
+      ctx.moveTo(x - 5 * unit, y + 5 * unit); ctx.lineTo(x + 5 * unit, y - 5 * unit); ctx.stroke();
     }
   }
 

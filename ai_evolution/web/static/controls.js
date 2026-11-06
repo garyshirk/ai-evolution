@@ -13,29 +13,39 @@ function refresh() {
   if (!report) return;
   view.update(report, selected);
   const state = report.state;
-  $("status").textContent = busy ? "Waiting…" : report.is_terminal ? "Empty population" : playing ? "Running" : state.step_count ? "Paused" : "Ready · paused";
+  $("status").textContent = busy ? "Waiting…" : report.is_terminal ? "Population extinct · paused" : playing ? "Running" : state.step_count ? "Paused" : "Ready · paused";
+  $("extinction").hidden = !report.is_terminal;
   $("start").disabled = busy || playing || report.is_terminal;
   $("pause").disabled = busy || !playing;
   $("step").disabled = busy || playing || report.is_terminal;
   $("reset").disabled = busy;
   const rows = [["Seed", report.seed], ["Simulated time", format(report.time)], ["Steps", state.step_count],
-    ["Living orgs", Object.keys(state.organisms).length], ["Food", Object.keys(state.food).length], ["Playback", `${$("speed").value}×`]];
+    ["Living orgs", Object.keys(state.organisms).length], ["Food", Object.keys(state.food).length],
+    ["Food consumed", state.statistics.food_consumed],
+    ["Deaths", state.statistics.starvation_deaths + state.statistics.age_deaths],
+    ["Starvation / age", `${state.statistics.starvation_deaths} / ${state.statistics.age_deaths}`],
+    ["Playback", `${$("speed").value}×`]];
   $("metrics").replaceChildren(...rows.map(([label, value]) => {
     const box = document.createElement("div"); box.className = "metric";
     const name = document.createElement("span"), number = document.createElement("strong");
     name.textContent = label; number.textContent = value; box.append(name, number); return box;
   }));
   const menu = $("organism");
-  if (menu.dataset.run !== report.run_id) {
-    menu.replaceChildren(new Option("None selected", ""), ...Object.values(state.organisms).map(org => new Option(`Org ${org.id}`, org.id)));
-    menu.dataset.run = report.run_id;
+  const menuKey = `${report.run_id}:${Object.keys(state.deaths).length}`;
+  if (menu.dataset.run !== menuKey) {
+    menu.replaceChildren(new Option("None selected", ""),
+      ...Object.values(state.organisms).map(org => new Option(`Org ${org.id}`, org.id)),
+      ...Object.values(state.deaths).map(death => new Option(`Org ${death.organism.id} · ${death.cause}`, death.organism.id)));
+    menu.dataset.run = menuKey;
   }
   menu.value = selected;
-  const org = state.organisms[selected];
-  const details = org ? [["Org ID", org.id], ["Parent ID", org.parent_id ?? "—"], ["Generation", org.generation],
+  const death = state.deaths[selected];
+  const org = state.organisms[selected] || death?.organism;
+  const details = org ? [["Org ID", org.id], ["Life status", death ? `Dead · ${death.cause}` : "Living"],
+    ...(death ? [["Death time", format(death.time)]] : []), ["Parent ID", org.parent_id ?? "—"], ["Generation", org.generation],
     ["Position", `${format(org.position.x)}, ${format(org.position.y)}`], ["Max speed", format(org.traits.speed)],
     ["Vision radius", format(org.traits.vision_radius)], ["Movement mode", org.movement_mode],
-    ["Current speed", format(org.actual_speed)], ["Energy", format(org.energy)], ["Age", format(report.time - org.birth_time)],
+    ["Current speed", format(org.actual_speed)], ["Energy", format(org.energy)], ["Age", format((death?.time ?? report.time) - org.birth_time)],
     ["Offspring", org.offspring_count]] : [["No selection", "Click an org or use the list."]];
   $("inspection").replaceChildren(...details.flatMap(([label, value]) => {
     const dt = document.createElement("dt"), dd = document.createElement("dd");
@@ -55,6 +65,13 @@ async function command(action) {
       const text = $("seed").value.trim();
       if (!/^-?\d+$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error("Enter a safe integer seed; it takes effect on Reset.");
       extra.seed = Number(text);
+      extra.parameters = {};
+      for (const [id, name] of [["food-rate", "food_spawn_rate"], ["movement-cost", "movement_cost"], ["vision-cost", "vision_cost"]]) {
+        const textValue = $(id).value.trim();
+        const value = Number(textValue);
+        if (!textValue || !Number.isFinite(value) || value < 0) throw new Error("Food rate and energy costs must be finite nonnegative numbers.");
+        extra.parameters[name] = value;
+      }
     }
     accept(await control(action, extra));
     if (action === "reset") { selected = ""; $("seed").value = report.seed; }
@@ -88,6 +105,9 @@ function frame(now) {
 }
 try {
   accept(await request("/api/state")); $("seed").value = report.seed;
+  $("food-rate").value = report.parameters.food_spawn_rate;
+  $("movement-cost").value = report.parameters.movement_cost;
+  $("vision-cost").value = report.parameters.vision_cost;
   // A reloaded page explicitly pauses the existing local run before scheduling.
   await command("pause");
 } catch (error) { showError(error); }

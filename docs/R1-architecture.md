@@ -1,7 +1,7 @@
 # R1 software architecture
 
 Date: November 4, 2026  
-Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A and B are authorized; Milestone C and later require separate authorization.
+Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A, B, and C are authorized; Milestone D and later require separate authorization.
 
 ## 1. Scope and decision authority
 
@@ -41,7 +41,7 @@ Use data classes for state and small functions for model rules:
 | `Food` | Stable ID, position, energy value |
 | `WorldState` | Living organisms, available food, integer tick index, current simulation time, deterministic ID counters |
 | `Simulation` | Owns configuration, state, seeded random generator, and authoritative advancement |
-| `MotionSegment` | Start position/time, constant velocity, duration; actual path and cost calculation |
+| `Motion` / implicit segments | Current constant velocity and planned stop; the event resolver splits actual paths at each wall, stop, meal, or death |
 | `MetricsCollector` | Time-series samples, cumulative events, energy accounting |
 
 Modules:
@@ -310,9 +310,11 @@ Planned commands after implementation:
 5. **Experiment reporting:** advanced controls, charts, exports, trait spreads/histograms, API replay tests and manual browser smoke test.
 6. **Calibration and acceptance:** multi-seed reports, performance measurements, late-run checks, documented baseline and limitations.
 
-Keep every stage runnable and testable. Milestones A and B are authorized. Do not begin Milestone C or later milestones without authorization.
+Keep every stage runnable and testable. Milestones A, B, and C are authorized. Do not begin Milestone D or later milestones without authorization.
 
 Milestone B implementation note: random search uses an analytic axis-folding calculation for reflected endpoints and outgoing headings, supporting multiple wall hits per tick. No swept encounters or interactions are implemented yet. Browser playback requests explicit bounded batches through the Flask adapter; it does not introduce a second physics loop. Canvas displays authoritative snapshots without interpolation. The server has no autonomous stepping thread, so only accepted advance/single-step requests move simulated time.
+
+Milestone C implementation note: the engine now splits motion at chronological events and solves swept disk encounters on every actual segment. Continuous expenses and immediate starvation/age death preempt food at the same computed time. Food spawns at its Poisson arrival time; shared simultaneous claims use seeded ordering and choices. Event segments are represented by the current `Motion` and elapsed interval rather than stored as a separate path-history object. Cumulative statistics and final death records support diagnostics and inspection. See `R1-model.md` for the implemented ordering, ledger, and floating-point conventions. Reproduction and mutation remain deferred.
 
 ## 12. Approved conventions and implementation concerns
 

@@ -1,4 +1,4 @@
-"""Seeded initialization and fixed-step searching; other biology is deferred."""
+"""Seeded survival and resource competition; reproduction is deferred."""
 
 from copy import deepcopy
 import math
@@ -6,7 +6,8 @@ import random
 
 from .config import SimulationConfig
 from .models import Food, Organism, Position, Traits, WorldState
-from .movement import search
+from .encounters import resolve_tick
+from .resources import next_arrival
 
 
 class Simulation:
@@ -61,6 +62,10 @@ class Simulation:
                 energy=self.config.food_energy,
             )
             self._state.next_food_id += 1
+        self._state.statistics.initial_energy = self.config.initial_population * self.config.starting_energy
+        self._state.next_food_spawn_time = next_arrival(0.0, self.config.food_spawn_rate, self._rng)
+        if self._state.is_terminal:
+            self._state.extinction_time = 0.0
 
     def _random_position(self) -> Position:
         return Position(
@@ -69,11 +74,10 @@ class Simulation:
         )
 
     def step(self) -> bool:
-        """Advance one search tick; return False for an empty experiment."""
+        """Resolve one decision tick (possibly terminating early at extinction)."""
         if self._state.is_terminal:
             return False
-        for identifier in sorted(self._state.organisms):
-            search(self._state.organisms[identifier], self.config, self._rng)
+        resolve_tick(self._state, self.config, self._rng)
         self._state.step_count += 1
         return True
 

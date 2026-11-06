@@ -138,7 +138,11 @@ class InitializationTests(unittest.TestCase):
 
 class StateAndClockTests(unittest.TestCase):
     def test_clock_uses_tick_index_not_accumulated_time(self):
-        simulation = Simulation(SimulationConfig(dt=0.03))
+        simulation = Simulation(SimulationConfig(
+            dt=0.03, initial_population=1, initial_food=0, food_spawn_rate=0,
+            baseline_cost=0, vision_cost=0, movement_cost=0,
+            search_speed_fraction=0, max_lifespan=1e9,
+        ))
         self.assertTrue(simulation.step())
         self.assertEqual(simulation.advance(9999), 9999)
         state = simulation.snapshot()
@@ -146,21 +150,23 @@ class StateAndClockTests(unittest.TestCase):
         self.assertEqual(state.time, 10000 * 0.03)
         self.assertEqual(state.organisms[1].age_at(state.time), state.time)
 
-    def test_stepping_does_not_implement_biology(self):
-        simulation = Simulation()
+    def test_stepping_does_not_implement_reproduction_or_mutation(self):
+        simulation = Simulation(SimulationConfig(
+            initial_population=5, initial_food=0, food_spawn_rate=0, max_lifespan=0.3,
+        ))
         before = simulation.snapshot()
-        # Go beyond the future lifespan: death is deliberately not implemented.
-        simulation.advance(3000)
+        simulation.advance(10)
         after = simulation.snapshot()
-        # Milestone B adds movement; all other biological state stays fixed.
-        for identifier, org in after.organisms.items():
+        # Milestone C adds costs, resources and death, but no births or mutation.
+        final_organisms = {**after.organisms,
+                           **{identifier: death.organism for identifier, death in after.deaths.items()}}
+        for identifier, org in final_organisms.items():
             original = before.organisms[identifier]
-            self.assertEqual(org.energy, original.energy)
             self.assertEqual(org.traits, original.traits)
             self.assertEqual(org.parent_id, original.parent_id)
             self.assertEqual(org.generation, original.generation)
             self.assertEqual(org.offspring_count, original.offspring_count)
-        self.assertEqual(set(after.organisms), set(before.organisms))
+        self.assertEqual(set(final_organisms), set(before.organisms))
         self.assertEqual(after.food, before.food)
         self.assertEqual(after.next_organism_id, before.next_organism_id)
         self.assertEqual(after.next_food_id, before.next_food_id)

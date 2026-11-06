@@ -9,15 +9,20 @@
 </head>
 <body>
   <header><div class="eyebrow">AI EVOLUTION / EXPERIMENT 01</div><h1>A world in motion</h1>
-    <p>R1 · Milestone B — random search only. Food is inert; energy is constant. No reproduction or death.</p></header>
+    <p>R1 · Milestone C — survival and resource competition. No reproduction or mutation yet.</p></header>
   <main>
     <section class="toolbar" aria-label="Simulation controls">
       <button id="start">Start / Resume</button><button id="pause">Pause</button>
       <button id="step">Single step</button><button id="reset">Reset</button>
       <label>Playback <select id="speed"><option value="0.25">0.25×</option><option value="1" selected>1×</option><option value="5">5×</option><option value="20">20×</option></select></label>
       <label>Seed for next reset <input id="seed" value="0" inputmode="numeric" size="10"></label>
+      <label>Food / time <input id="food-rate" type="number" min="0" step="0.5" value="8"></label>
+      <label>Movement cost <input id="movement-cost" type="number" min="0" step="0.01" value="0.05"></label>
+      <label>Vision cost <input id="vision-cost" type="number" min="0" step="0.01" value="0.1"></label>
       <span id="status" role="status">Connecting…</span>
     </section>
+    <p class="hint">Seed, food rate, and cost edits apply only on Reset. Start / Resume keeps the current experiment. Playback can change at any time.</p>
+    <p id="extinction" role="status" hidden>Population extinct. Final state and statistics are preserved. Reset to start another experiment.</p>
     <p id="error" role="alert" hidden></p>
     <section class="metrics" id="metrics" aria-label="Simulation information"></section>
     <div class="workspace">
