@@ -168,7 +168,8 @@ class EnergyAndDeathTests(unittest.TestCase):
     def assert_ledger(self, state):
         stats = state.statistics
         expected = (stats.initial_energy + stats.food_energy_gained - stats.baseline_spent
-                    - stats.vision_spent - stats.movement_spent - stats.energy_removed_at_death)
+                    - stats.vision_spent - stats.movement_spent - stats.energy_removed_at_death
+                    - stats.reproduction_overhead_spent)
         self.assertAlmostEqual(sum(org.energy for org in state.organisms.values()), expected, places=9)
 
     def test_cost_rates_and_quadratic_cost_per_distance(self):

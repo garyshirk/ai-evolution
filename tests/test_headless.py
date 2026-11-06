@@ -29,7 +29,7 @@ class HeadlessTests(unittest.TestCase):
         self.assertEqual(report["state"]["step_count"], state.step_count)
         self.assertEqual(report["time"], state.time)
         self.assertTrue(report["biology_implemented"])
-        self.assertFalse(report["reproduction_implemented"])
+        self.assertTrue(report["reproduction_implemented"])
         self.assertFalse(report["is_terminal"])
         self.assertEqual(report["state"]["organisms"]["1"]["energy"], state.organisms[1].energy)
         self.assertEqual(len(report["state"]["food"]), len(state.food))

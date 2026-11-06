@@ -2,21 +2,21 @@
 
 A laboratory for independent, agent-based evolutionary experiments. The simulation engine is Python; Flask and Canvas provide a local browser interface. Organisms are simple rule-based software entities, with no LLM agents.
 
-## Current release: R1, Milestone C
+## Current release: R1, Milestone D
 
-Implemented: seeded initialization, fixed decision ticks, persistent search, nearest-visible-food pursuit, full-path consumption, chronological competition, continuous metabolic/vision/movement costs, Poisson food replenishment, starvation and age death, and browser controls and inspection.
+Implemented: seeded initialization, fixed decision ticks, search and pursuit, full-path food competition, continuous energy costs, Poisson replenishment, starvation/age death, asexual reproduction, trait inheritance and mutation, and browser controls and inspection.
 
-**Reproduction and mutation are not implemented.** Population can only stay constant or decline. All founders reach their maximum lifespan at simulated time 200 under the defaults, so eventual extinction is expected. This milestone is not a viable evolutionary population or an assessment of the later 1,000-unit calibration target. No charts, fitness calculations, or calibration are included.
+Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Full evolutionary charts (Milestone E) and population calibration (Milestone F) are not implemented. Starting defaults have only undergone smoke testing.
 
 ## Launch locally
 
 Use the existing Python 3.13 `.venv`, from the repository root:
 
 ```sh
-.venv/bin/python -m ai_evolution serve --port 5051
+.venv/bin/python -m ai_evolution serve --port 5052
 ```
 
-Open [the browser simulation](http://127.0.0.1:5051). Stop the server with Ctrl+C. The default port without `--port` is 5000; choose an unused port if another service or an older simulation server occupies it. Debug mode is disabled and the server binds only to localhost.
+Open [the browser simulation](http://127.0.0.1:5052). Stop the server with Ctrl+C. The default port without `--port` is 5000; choose an unused port if another service or an older simulation server occupies it. Debug mode is disabled and the server binds only to localhost.
 
 Flask and its dependencies are already installed. To recreate the tested environment when needed:
 
@@ -28,11 +28,18 @@ Flask and its dependencies are already installed. To recreate the tested environ
 
 - Start/Resume runs the current experiment; Pause drains the current short batch and preserves state. Single step advances one decision tick, including all continuous events inside it.
 - Reset rebuilds the experiment. Seed, food rate, movement coefficient, and vision coefficient edits take effect only on Reset. Start/Resume never silently applies pending model edits.
+- Advanced also provides **Initial Food**, a nonnegative integer no greater than the configured food cap (default 500). It defaults to 200 and is independent of the replenishment rate, which still defaults to 8. For scarcity, set Initial Food to 10 and Food / time to 0.1, then Reset. Zero initial food and zero replenishment are supported independently.
+- Food / time accepts fractional rates such as 0.05, 0.1, 0.5, and 1.0. Its spinner increment is 0.5, but manually typed rates are validated as finite nonnegative numbers rather than restricted to spinner multiples.
+- Advanced mutation settings provide independent per-trait probabilities and magnitudes, also applied only on Reset. Values are fractions: 0.05 means a 5% chance per birth or a perturbation up to 5% of the allowed trait range. Set both probabilities to zero for exact inheritance without mutation.
 - Playback (0.25×, 1×, 5×, 20×) changes request scheduling, not physics, costs, dt, or random draws. Local throughput and background-tab throttling may reduce achieved speed. No physics steps are skipped to catch up.
 - Click an organism to inspect it. Repeated clicks cycle nearby/overlapping organisms; the dropdown can select every living or dead organism. The selected vision overlay is optional. Dead-organism details freeze at its death time; a selected death location is marked with a cross.
-- Statistics show time, steps, live population, food present/consumed, and starvation/age deaths. At extinction, advancement stops automatically, final state and statistics remain visible, and Reset remains available.
+- Statistics show time, steps, live population, births, deaths, highest generation reached, mean inherited speed/vision, and food present/consumed. Highest generation is cumulative, while means describe living organisms only; empty-population means display a dash.
+- Inspect parent ID, generation, founder lineage, birth time, age, traits, energy, and offspring count. Newborns have a green ring for their first 0.5 simulated time units. Fast-forward may skip seeing that brief visual effect, but never skips the birth or physics.
+- At extinction, advancement stops automatically, final state and statistics remain visible, and Reset remains available.
 
 Browser seeds are integers within JavaScript's safe range (±9,007,199,254,740,991); Python headless seeds may be arbitrary integers. One in-memory run is shared by tabs; use one control tab at a time. Stale run/step requests are rejected. Reloading explicitly pauses the run. Server restart clears its state. Canvas displays authoritative snapshots without interpolation.
+
+The environment occupies a pane fitted to the available viewport, preserving the world's aspect ratio. Window resizing changes only rendering size, never world dimensions or physics. Controls, Advanced settings, statistics, and inspection scroll independently; the full environment stays visible. Narrow windows stack the world above a scrolling control pane. Canvas picking and vision overlays use the current fitted dimensions.
 
 ## Run headlessly
 
@@ -40,12 +47,15 @@ Browser seeds are integers within JavaScript's safe range (±9,007,199,254,740,9
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --population 5 --food 0 --food-rate 0
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --movement-cost 0.1 --vision-cost 0.2
+.venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --mutation-probability 0
 .venv/bin/python -m ai_evolution --help
 ```
 
-The command prints JSON containing engine/Python versions, seed, parameters, requested/completed steps, time, terminal status, active state, death records, and cumulative energy/resource statistics. JSON object keys for IDs are strings. This is a full-state report, not the later time-series export system. Headless execution imports no Flask or browser modules.
+The command prints JSON containing engine/Python versions, seed, parameters, requested/completed steps, time, terminal status, active state, death records, cumulative statistics, and a live summary including population energy and the energy-ledger residual. JSON object keys for IDs are strings. This is a full-state report, not the later time-series export system. Headless execution imports no Flask or browser modules.
 
 Options include `--seed` (0), `--steps` (0), `--population` (50), `--food` (200), `--dt` (0.1), `--food-rate` (8), `--movement-cost` (0.05), and `--vision-cost` (0.1). `--food 0` disables only initial food; also specify `--food-rate 0` to disable replenishment. Invalid inputs produce a CLI error. An initially empty population is terminal and advances zero ticks.
+
+The CLI also accepts shared `--mutation-probability` and `--mutation-magnitude` (both default 0.05). Python configuration and the browser Advanced panel retain independent speed/vision settings.
 
 ## Test
 
@@ -54,7 +64,15 @@ Options include `--seed` (0), `--steps` (0), `--population` (50), `--food` (200)
 .venv/bin/python -m pip check
 ```
 
-Tests cover initialization/configuration, RNG isolation, movement/reflection, swept food encounters, arrival ties, costs and energy conservation, immediate death, spawning/caps, population decline/extinction, replay/batching, Flask controls, and headless equivalence. No third-party test framework is needed. Earlier milestone invariants are retained in isolated fixtures where appropriate; constant-energy/food and immortal-organism expectations have been updated for the authorized survival mechanics.
+Tests cover initialization/configuration, RNG isolation, movement/reflection, swept encounters and arrival ties, energy conservation, death, spawning/caps, reproduction thresholds and transfers, newborn timing, inheritance, independent mutation and reflection, lineage, population changes, replay/batching, Flask controls, and headless equivalence. No third-party test framework is needed. Earlier milestone invariants remain covered; resource-free founders still cannot reach the reproduction threshold.
+
+## Reproduction and mutation
+
+At tick end, a surviving parent's energy must be strictly greater than 60 and sufficient to leave it positive after transferring 25 to its child and spending 5 overhead. Each eligible parent has at most one offspring per tick. Newborns begin at age zero and first act on the next tick. Parent and child both remain alive unless later model events kill them.
+
+Speed and vision inherit exactly unless their independent mutation test fires. Defaults are 5% per trait per birth, with a uniform positive/negative perturbation up to 5% of the trait's full allowed range. Reflect overshoots into speed 0.5–8 and vision 1–30. Place offspring uniformly in a radius-1 disk near the parent with reflected world coordinates. Each initial heading is a separate seeded uniform draw, not an inherited trait; do not force it to differ from the parent. Once active, parent and offspring can pursue the same food and therefore move together. No energy-efficiency trait is introduced.
+
+Population energy is reduced only by the reproduction overhead: the child's reserve is a transfer, not newly created energy. Diagnostics separately record transferred energy, overhead, and mutation events. A zero-magnitude mutation event changes no value. See the model document for exact draw order and ledger equations.
 
 ## Engine API
 
@@ -72,7 +90,7 @@ Configuration and traits are frozen dataclasses. Engine state is private; snapsh
 
 One private `random.Random(seed)` drives initialization, searching, spawning, and exact conflict resolution in canonical order. Snapshot reads and browser rendering do not draw from it. Repeatability is supported for the same engine/runtime environment, seed, configuration, and step count; cross-version/platform bit identity is not promised. Food/organism IDs use separate monotonic namespaces starting at 1.
 
-Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone C. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
+Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone D. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
 
 ## Model and project documentation
 
@@ -80,6 +98,8 @@ Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` recor
 - [R1 requirements](docs/R1-requirements.md)
 - [Approved architecture](docs/R1-architecture.md)
 - [Implemented model, equations, update order, and numerical limitations](docs/R1-model.md)
-- [Milestone C verification](docs/Milestone-C-verification.md)
+- [Milestone D verification and smoke observations](docs/Milestone-D-verification.md)
 
-Next is Milestone D: reproduction, inheritance/mutation, and related tests. It has not been started.
+Long runs can accumulate many organisms and archived death records; no history retention limit or artificial population cap has been introduced. Runtime and memory use should be measured before extensive runs. Persistence is not established by the smoke tests.
+
+Next is Milestone E: evolutionary reporting and charts. It has not been started.

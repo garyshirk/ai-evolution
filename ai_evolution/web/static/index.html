@@ -9,27 +9,38 @@
 </head>
 <body>
   <header><div class="eyebrow">AI EVOLUTION / EXPERIMENT 01</div><h1>A world in motion</h1>
-    <p>R1 · Milestone C — survival and resource competition. No reproduction or mutation yet.</p></header>
+    <p>R1 · Milestone D — survival, reproduction, and inherited variation.</p></header>
   <main>
-    <section class="toolbar" aria-label="Simulation controls">
-      <button id="start">Start / Resume</button><button id="pause">Pause</button>
-      <button id="step">Single step</button><button id="reset">Reset</button>
-      <label>Playback <select id="speed"><option value="0.25">0.25×</option><option value="1" selected>1×</option><option value="5">5×</option><option value="20">20×</option></select></label>
-      <label>Seed for next reset <input id="seed" value="0" inputmode="numeric" size="10"></label>
-      <label>Food / time <input id="food-rate" type="number" min="0" step="0.5" value="8"></label>
-      <label>Movement cost <input id="movement-cost" type="number" min="0" step="0.01" value="0.05"></label>
-      <label>Vision cost <input id="vision-cost" type="number" min="0" step="0.01" value="0.1"></label>
-      <span id="status" role="status">Connecting…</span>
+    <section class="world-panel" aria-label="Environment">
+      <div class="world-heading"><span>THE ENVIRONMENT</span><span><i class="org-key"></i> Organism <i class="food-key"></i> Food</span></div>
+      <div class="world-stage"><canvas id="world" aria-label="Simulation world. Click an organism to inspect it."></canvas></div>
+      <p class="hint">Click to inspect; repeated clicks cycle overlapping organisms. Green rings mark offspring during their first 0.5 simulated time units.</p>
     </section>
-    <p class="hint">Seed, food rate, and cost edits apply only on Reset. Start / Resume keeps the current experiment. Playback can change at any time.</p>
-    <p id="extinction" role="status" hidden>Population extinct. Final state and statistics are preserved. Reset to start another experiment.</p>
-    <p id="error" role="alert" hidden></p>
-    <section class="metrics" id="metrics" aria-label="Simulation information"></section>
-    <div class="workspace">
-      <section class="world-panel"><div class="world-heading"><span>THE ENVIRONMENT</span><span><i class="org-key"></i> Organism <i class="food-key"></i> Food</span></div>
-        <canvas id="world" aria-label="Simulation world. Click an organism to inspect it."></canvas>
-        <p class="hint">Click an organism to inspect. Repeated clicks cycle through overlapping organisms; the list also selects any organism.</p>
+    <div class="controls-panel" tabindex="0" aria-label="Controls, statistics, and inspection">
+      <section class="toolbar" aria-label="Simulation controls">
+        <button id="start">Start / Resume</button><button id="pause">Pause</button>
+        <button id="step">Single step</button><button id="reset">Reset</button>
+        <label>Playback <select id="speed"><option value="0.25">0.25×</option><option value="1" selected>1×</option><option value="5">5×</option><option value="20">20×</option></select></label>
+        <label>Seed for next reset <input id="seed" value="0" inputmode="numeric" size="10"></label>
+        <label>Food / time <input id="food-rate" type="number" min="0" step="0.5" value="8"></label>
+        <label>Movement cost <input id="movement-cost" type="number" min="0" step="0.01" value="0.05"></label>
+        <label>Vision cost <input id="vision-cost" type="number" min="0" step="0.01" value="0.1"></label>
+        <span id="status" role="status">Connecting…</span>
       </section>
+      <p class="hint">Model edits apply only on Reset. Start / Resume keeps the current experiment. Playback can change at any time.</p>
+      <details class="advanced"><summary>Advanced · initial food and mutation</summary>
+        <p class="hint">Initial Food is independent of Food / time. Mutation values are fractions: 0.05 means 5%. Magnitude uses the full allowed trait range. Changes apply only on Reset.</p>
+        <div class="advanced-fields">
+          <label>Initial Food <input id="initial-food" type="number" min="0" step="1" value="200"></label>
+          <label>Speed mutation probability <input id="speed-mutation-probability" type="number" min="0" max="1" step="0.01" value="0.05"></label>
+          <label>Vision mutation probability <input id="vision-mutation-probability" type="number" min="0" max="1" step="0.01" value="0.05"></label>
+          <label>Speed mutation magnitude <input id="speed-mutation-magnitude" type="number" min="0" step="0.01" value="0.05"></label>
+          <label>Vision mutation magnitude <input id="vision-mutation-magnitude" type="number" min="0" step="0.01" value="0.05"></label>
+        </div>
+      </details>
+      <p id="extinction" role="status" hidden>Population extinct. Final state and statistics are preserved. Reset to start another experiment.</p>
+      <p id="error" role="alert" hidden></p>
+      <section class="metrics" id="metrics" aria-label="Simulation information"></section>
       <aside><h2>Organism inspector</h2>
         <label>Select organism <select id="organism"><option value="">None selected</option></select></label>
         <label class="check"><input id="vision" type="checkbox" checked> Show selected vision radius</label>

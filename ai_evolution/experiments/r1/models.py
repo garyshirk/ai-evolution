@@ -1,6 +1,7 @@
 """Engine data only: no rendering, biological rules, or global randomness."""
 
 from dataclasses import dataclass, field
+import math
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,12 @@ class DeathRecord:
 
 @dataclass
 class Statistics:
+    births: int = 0
+    highest_generation: int = 0
+    offspring_energy_transferred: float = 0.0
+    reproduction_overhead_spent: float = 0.0
+    speed_mutations: int = 0
+    vision_mutations: int = 0
     food_consumed: int = 0
     starvation_deaths: int = 0
     age_deaths: int = 0
@@ -87,3 +94,21 @@ class WorldState:
     @property
     def is_terminal(self) -> bool:
         return not self.organisms
+
+    def summary(self) -> dict[str, int | float | None]:
+        """Read-only live summaries and a population energy-ledger residual."""
+        organisms = [self.organisms[identifier] for identifier in sorted(self.organisms)]
+        count = len(organisms)
+        stats = self.statistics
+        live_energy = math.fsum(org.energy for org in organisms)
+        expected_energy = (stats.initial_energy + stats.food_energy_gained
+                           - stats.baseline_spent - stats.vision_spent - stats.movement_spent
+                           - stats.energy_removed_at_death - stats.reproduction_overhead_spent)
+        return {
+            "population": count, "births": stats.births,
+            "deaths": stats.starvation_deaths + stats.age_deaths,
+            "highest_generation": stats.highest_generation,
+            "mean_speed": math.fsum(org.traits.speed for org in organisms) / count if count else None,
+            "mean_vision": math.fsum(org.traits.vision_radius for org in organisms) / count if count else None,
+            "living_energy": live_energy, "energy_ledger_residual": live_energy - expected_energy,
+        }

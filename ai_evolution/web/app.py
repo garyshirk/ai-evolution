@@ -21,9 +21,10 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
         state = simulation.snapshot()
         return {
             "run_id": run_id, "running": running, "seed": simulation.seed,
-            "engine_version": __version__, "milestone": "C",
+            "engine_version": __version__, "milestone": "D",
             "parameters": asdict(simulation.config), "state": asdict(state),
             "time": state.time, "is_terminal": state.is_terminal,
+            "summary": state.summary(),
         }
 
     @app.after_request
@@ -60,7 +61,9 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
                 if type(seed_value) is not int or abs(seed_value) > 2**53 - 1:
                     return jsonify(error="Seed must be a JavaScript-safe integer"), 400
                 updates = data.get("parameters", {})
-                allowed = {"food_spawn_rate", "movement_cost", "vision_cost"}
+                allowed = {"initial_food", "food_spawn_rate", "movement_cost", "vision_cost",
+                           "speed_mutation_probability", "vision_mutation_probability",
+                           "speed_mutation_magnitude", "vision_mutation_magnitude"}
                 if not isinstance(updates, dict) or not updates.keys() <= allowed:
                     return jsonify(error="Unsupported reset parameters"), 400
                 try:

@@ -14,7 +14,14 @@ export class WorldView {
     if (!this.report) return;
     const {parameters: config, state} = this.report;
     const canvas = this.canvas;
-    canvas.style.aspectRatio = `${config.world_width} / ${config.world_height}`;
+    // Fit the whole world into the available viewport pane, without changing
+    // simulation dimensions. Only the controls pane scrolls.
+    const stage = canvas.parentElement;
+    const available = stage.getBoundingClientRect();
+    const scale = Math.min(available.width / config.world_width, available.height / config.world_height);
+    if (scale <= 0) return;
+    canvas.style.width = `${config.world_width * scale}px`;
+    canvas.style.height = `${config.world_height * scale}px`;
     const rect = canvas.getBoundingClientRect();
     const ratio = window.devicePixelRatio || 1;
     const width = Math.round(rect.width * ratio), height = Math.round(rect.height * ratio);
@@ -29,6 +36,10 @@ export class WorldView {
     for (const food of Object.values(state.food)) circle(food.position.x, food.position.y, 1.8 * unit, "#a97026");
     for (const org of Object.values(state.organisms)) {
       circle(org.position.x, org.position.y, 4 * unit, `hsl(${185 + org.id % 45} 52% 39%)`);
+      if (org.parent_id !== null && this.report.time - org.birth_time <= 0.5) {
+        ctx.beginPath(); ctx.arc(org.position.x, org.position.y, 9 * unit, 0, 2 * Math.PI);
+        ctx.lineWidth = 2 * unit; ctx.strokeStyle = "#39a66c"; ctx.stroke();
+      }
       if (String(org.id) === this.selected) {
         ctx.beginPath(); ctx.arc(org.position.x, org.position.y, 7 * unit, 0, 2 * Math.PI);
         ctx.lineWidth = 2 * unit; ctx.strokeStyle = "#183d37"; ctx.stroke();
@@ -45,6 +56,7 @@ export class WorldView {
   pick(event) {
     if (!this.report) return;
     const rect = this.canvas.getBoundingClientRect(), config = this.report.parameters;
+    if (rect.width === 0 || rect.height === 0) return;
     const x = (event.clientX - rect.left) / rect.width * config.world_width;
     const y = (event.clientY - rect.top) / rect.height * config.world_height;
     const tolerance = 10 * config.world_width / rect.width;

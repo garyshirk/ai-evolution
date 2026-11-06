@@ -6,6 +6,14 @@ let report, selected = "", playing = false, busy = false, pending = null;
 let credit = 0, previousTime = performance.now();
 const view = new WorldView($("world"), id => { selected = id; refresh(); });
 const format = value => Number(value).toFixed(3);
+const parameterFields = [
+  ["initial-food", "initial_food"],
+  ["food-rate", "food_spawn_rate"], ["movement-cost", "movement_cost"], ["vision-cost", "vision_cost"],
+  ["speed-mutation-probability", "speed_mutation_probability"],
+  ["vision-mutation-probability", "vision_mutation_probability"],
+  ["speed-mutation-magnitude", "speed_mutation_magnitude"],
+  ["vision-mutation-magnitude", "vision_mutation_magnitude"],
+];
 
 function showError(error) { $("error").textContent = error.message; $("error").hidden = false; }
 function accept(next) { report = next; refresh(); }
@@ -21,6 +29,9 @@ function refresh() {
   $("reset").disabled = busy;
   const rows = [["Seed", report.seed], ["Simulated time", format(report.time)], ["Steps", state.step_count],
     ["Living orgs", Object.keys(state.organisms).length], ["Food", Object.keys(state.food).length],
+    ["Births", report.summary.births], ["Highest generation", report.summary.highest_generation],
+    ["Mean speed", report.summary.mean_speed === null ? "—" : format(report.summary.mean_speed)],
+    ["Mean vision", report.summary.mean_vision === null ? "—" : format(report.summary.mean_vision)],
     ["Food consumed", state.statistics.food_consumed],
     ["Deaths", state.statistics.starvation_deaths + state.statistics.age_deaths],
     ["Starvation / age", `${state.statistics.starvation_deaths} / ${state.statistics.age_deaths}`],
@@ -31,7 +42,7 @@ function refresh() {
     name.textContent = label; number.textContent = value; box.append(name, number); return box;
   }));
   const menu = $("organism");
-  const menuKey = `${report.run_id}:${Object.keys(state.deaths).length}`;
+  const menuKey = `${report.run_id}:${state.statistics.births}:${Object.keys(state.deaths).length}`;
   if (menu.dataset.run !== menuKey) {
     menu.replaceChildren(new Option("None selected", ""),
       ...Object.values(state.organisms).map(org => new Option(`Org ${org.id}`, org.id)),
@@ -43,6 +54,7 @@ function refresh() {
   const org = state.organisms[selected] || death?.organism;
   const details = org ? [["Org ID", org.id], ["Life status", death ? `Dead · ${death.cause}` : "Living"],
     ...(death ? [["Death time", format(death.time)]] : []), ["Parent ID", org.parent_id ?? "—"], ["Generation", org.generation],
+    ["Founder lineage", org.founder_lineage_id], ["Birth time", format(org.birth_time)],
     ["Position", `${format(org.position.x)}, ${format(org.position.y)}`], ["Max speed", format(org.traits.speed)],
     ["Vision radius", format(org.traits.vision_radius)], ["Movement mode", org.movement_mode],
     ["Current speed", format(org.actual_speed)], ["Energy", format(org.energy)], ["Age", format((death?.time ?? report.time) - org.birth_time)],
@@ -66,10 +78,14 @@ async function command(action) {
       if (!/^-?\d+$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error("Enter a safe integer seed; it takes effect on Reset.");
       extra.seed = Number(text);
       extra.parameters = {};
-      for (const [id, name] of [["food-rate", "food_spawn_rate"], ["movement-cost", "movement_cost"], ["vision-cost", "vision_cost"]]) {
+      for (const [id, name] of parameterFields) {
         const textValue = $(id).value.trim();
         const value = Number(textValue);
-        if (!textValue || !Number.isFinite(value) || value < 0) throw new Error("Food rate and energy costs must be finite nonnegative numbers.");
+        if (!textValue || !Number.isFinite(value) || value < 0) throw new Error("Model settings must be finite nonnegative numbers.");
+        if (name.endsWith("probability") && value > 1) throw new Error("Mutation probabilities must be between 0 and 1.");
+        if (name === "initial_food" && (!Number.isSafeInteger(value) || value > report.parameters.food_cap)) {
+          throw new Error(`Initial Food must be a nonnegative integer at most ${report.parameters.food_cap}.`);
+        }
         extra.parameters[name] = value;
       }
     }
@@ -105,9 +121,8 @@ function frame(now) {
 }
 try {
   accept(await request("/api/state")); $("seed").value = report.seed;
-  $("food-rate").value = report.parameters.food_spawn_rate;
-  $("movement-cost").value = report.parameters.movement_cost;
-  $("vision-cost").value = report.parameters.vision_cost;
+  for (const [id, name] of parameterFields) $(id).value = report.parameters[name];
+  $("initial-food").max = report.parameters.food_cap;
   // A reloaded page explicitly pauses the existing local run before scheduling.
   await command("pause");
 } catch (error) { showError(error); }

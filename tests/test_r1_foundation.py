@@ -150,14 +150,14 @@ class StateAndClockTests(unittest.TestCase):
         self.assertEqual(state.time, 10000 * 0.03)
         self.assertEqual(state.organisms[1].age_at(state.time), state.time)
 
-    def test_stepping_does_not_implement_reproduction_or_mutation(self):
+    def test_founders_without_resources_do_not_reproduce_or_mutate(self):
         simulation = Simulation(SimulationConfig(
             initial_population=5, initial_food=0, food_spawn_rate=0, max_lifespan=0.3,
         ))
         before = simulation.snapshot()
         simulation.advance(10)
         after = simulation.snapshot()
-        # Milestone C adds costs, resources and death, but no births or mutation.
+        # These founders cannot reach the reproduction threshold without food.
         final_organisms = {**after.organisms,
                            **{identifier: death.organism for identifier, death in after.deaths.items()}}
         for identifier, org in final_organisms.items():

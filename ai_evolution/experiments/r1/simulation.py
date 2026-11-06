@@ -1,4 +1,4 @@
-"""Seeded survival and resource competition; reproduction is deferred."""
+"""Seeded survival, resource competition, and tick-end asexual evolution."""
 
 from copy import deepcopy
 import math
@@ -8,6 +8,7 @@ from .config import SimulationConfig
 from .models import Food, Organism, Position, Traits, WorldState
 from .encounters import resolve_tick
 from .resources import next_arrival
+from .reproduction import reproduce
 
 
 class Simulation:
@@ -79,6 +80,8 @@ class Simulation:
             return False
         resolve_tick(self._state, self.config, self._rng)
         self._state.step_count += 1
+        if not self._state.is_terminal:
+            reproduce(self._state, self.config, self._rng)
         return True
 
     def advance(self, steps: int) -> int:

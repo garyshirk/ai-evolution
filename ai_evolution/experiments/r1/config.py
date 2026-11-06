@@ -81,3 +81,6 @@ class SimulationConfig:
                 raise ValueError(f"{trait}_min must be less than {trait}_max")
             if not lower <= founder_lower <= founder_upper <= upper:
                 raise ValueError(f"founder {trait} range must lie within trait bounds")
+            magnitude = getattr(self, f"{trait}_mutation_magnitude")
+            if not math.isfinite(2 * magnitude * (upper - lower)):
+                raise ValueError(f"{trait} mutation magnitude must permit finite perturbations")

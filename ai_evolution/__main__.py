@@ -10,11 +10,11 @@ from .experiments.r1 import Simulation, SimulationConfig
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="AI Evolution — Milestone C (includes Milestone A foundation)")
+    parser = argparse.ArgumentParser(description="AI Evolution — Milestone D (includes Milestone A foundation)")
     commands = parser.add_subparsers(dest="command", required=True)
     serve = commands.add_parser("serve", help="Launch the local browser interface")
     serve.add_argument("--port", type=int, default=5000)
-    headless = commands.add_parser("headless", help="Run survival and resource competition; no reproduction yet")
+    headless = commands.add_parser("headless", help="Run survival, resource competition, reproduction and mutation")
     headless.add_argument("--seed", type=int, default=0)
     headless.add_argument("--steps", type=int, default=0)
     headless.add_argument("--population", type=int, default=50)
@@ -23,6 +23,10 @@ def main(argv: list[str] | None = None) -> int:
     headless.add_argument("--food-rate", type=float, default=8.0)
     headless.add_argument("--movement-cost", type=float, default=0.05)
     headless.add_argument("--vision-cost", type=float, default=0.1)
+    headless.add_argument("--mutation-probability", type=float, default=0.05,
+                          help="Shared speed/vision mutation probability; independent engine settings remain available")
+    headless.add_argument("--mutation-magnitude", type=float, default=0.05,
+                          help="Mutation perturbation scale as a fraction of each trait range")
     args = parser.parse_args(argv)
     if args.command == "serve":
         from .web.app import create_app
@@ -34,6 +38,8 @@ def main(argv: list[str] | None = None) -> int:
         config = SimulationConfig(
             initial_population=args.population, initial_food=args.food, dt=args.dt,
             food_spawn_rate=args.food_rate, movement_cost=args.movement_cost, vision_cost=args.vision_cost,
+            speed_mutation_probability=args.mutation_probability, vision_mutation_probability=args.mutation_probability,
+            speed_mutation_magnitude=args.mutation_magnitude, vision_mutation_magnitude=args.mutation_magnitude,
         )
         simulation = Simulation(config, seed=args.seed)
         completed = simulation.advance(args.steps)
@@ -41,13 +47,14 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(error))
     state = simulation.snapshot()
     print(json.dumps({
-        "milestone": "C", "biology_implemented": True, "reproduction_implemented": False,
+        "milestone": "D", "biology_implemented": True, "reproduction_implemented": True,
         "search_movement_implemented": True,
         "engine_version": __version__, "python_version": platform.python_version(),
         "seed": simulation.seed, "parameters": asdict(config),
         "requested_steps": args.steps, "completed_steps": completed,
         "time": state.time, "is_terminal": state.is_terminal,
         "state": asdict(state),
+        "summary": state.summary(),
     }, sort_keys=True, allow_nan=False))
     return 0
 
