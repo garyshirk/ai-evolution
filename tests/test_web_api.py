@@ -29,6 +29,44 @@ class WebTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             response.close()
 
+    def test_initial_population_defaults_reset_and_exports(self):
+        self.assertEqual(self.state["parameters"]["initial_population"], 50)
+        self.assertEqual(len(self.state["state"]["organisms"]), 50)
+        for population in (7, 0, 50):
+            self.assertEqual(self.control("reset", parameters={"initial_population": population}).status_code, 200)
+            self.assertEqual(len(self.state["state"]["organisms"]), population)
+            self.assertEqual(self.state["time"], 0)
+            self.assertEqual(self.state["measurement"]["initial_population"], population)
+            exported = self.client.get("/api/export.json").get_json()
+            self.assertEqual(exported["configuration"]["initial_population"], population)
+            self.assertEqual(exported["final_statistics"]["population"], population)
+            self.assertEqual(len(exported["living_organisms"]), population)
+            self.assertEqual(exported["measurements"][0]["population"], population)
+        self.control("step")
+        self.assertEqual(self.control("reset", parameters={"initial_population": 7}).status_code, 200)
+        self.assertEqual(len(self.state["state"]["organisms"]), 7)
+        self.assertEqual(self.state["state"]["statistics"]["births"], 0)
+
+    def test_initial_population_validation_is_atomic_and_reset_only(self):
+        original = self.state
+        for value in (-1, 2.5, True, "7", None, 501):
+            with self.subTest(value=value):
+                self.assertEqual(self.control("reset", parameters={"initial_population": value}).status_code, 400)
+                self.assertEqual(self.client.get("/api/state").get_json(), original)
+        self.assertEqual(self.control("start", parameters={"initial_population": 7}).status_code, 400)
+        self.assertEqual(self.client.get("/api/state").get_json(), original)
+        self.assertEqual(self.control("reset", parameters={"initial_population": 500}).status_code, 200)
+        self.assertEqual(len(self.state["state"]["organisms"]), 500)
+
+    def test_initial_population_uses_configured_application_limit(self):
+        from ai_evolution.experiments.r1.batch import BatchLimits
+        self.client = create_app(batch_limits=BatchLimits(max_initial_population=60)).test_client()
+        self.state = self.client.get("/api/state").get_json()
+        self.assertEqual(self.state["population_limit"], 60)
+        self.assertEqual(self.control("reset", parameters={"initial_population": 61}).status_code, 400)
+        self.assertEqual(self.control("reset", parameters={"initial_population": 60}).status_code, 200)
+        self.assertEqual(len(self.state["state"]["organisms"]), 60)
+
     def test_initial_state_and_single_step(self):
         self.assertFalse(self.state["running"])
         self.assertEqual(self.control("step").status_code, 200)

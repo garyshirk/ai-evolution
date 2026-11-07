@@ -103,3 +103,6 @@ JSON schema version 1 gains an additive `living_organisms` array, sorted by ID, 
 | `offspring_count` | Offspring produced so far by this organism |
 
 The array contains only living organisms and is empty at extinction. It is a current snapshot, not an organism history, genealogy archive, or resumption checkpoint. CSV time-series columns remain unchanged. Export size and scatter work scale with the living population; no additional persistent individual history is collected. The scatter reuses the existing browser state payload, with no additional model reads or random draws.
+
+
+For Milestone F.1 batch execution, aggregate denominators, retained run histories, and batch JSON exports, see `R1-batch.md`. The single-run export formats and biological measurements documented here are unchanged.

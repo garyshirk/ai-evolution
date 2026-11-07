@@ -1,6 +1,7 @@
-"""Single local run with explicit advancement; no background physics thread."""
+"""Explicit single-run advancement and one independent background batch worker."""
 
 from dataclasses import asdict, replace
+import json
 from threading import Lock
 from uuid import uuid4
 
@@ -10,14 +11,17 @@ from .. import __version__
 from ..experiments.r1 import Simulation, SimulationConfig
 from ..experiments.r1.metrics import distributions
 from ..experiments.r1.exports import export_csv, export_json
+from ..experiments.r1.batch import BatchConfig, BatchRunner
 
 
-def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flask:
+def create_app(config: SimulationConfig | None = None, *, seed: int = 0, batch_limits=None) -> Flask:
     app = Flask(__name__, static_folder="static")
     simulation = Simulation(config, seed=seed)
     lock = Lock()
     run_id = uuid4().hex
     running = False
+    batch = BatchRunner(batch_limits)
+    app.extensions["batch_runner"] = batch
 
     def report():
         state = simulation.snapshot()
@@ -25,6 +29,7 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
             "run_id": run_id, "running": running, "seed": simulation.seed,
             "engine_version": __version__, "milestone": "E",
             "parameters": asdict(simulation.config), "state": asdict(state),
+            "population_limit": batch.limits.max_initial_population,
             "time": state.time, "is_terminal": state.is_terminal,
             "summary": state.summary(),
             "measurement": asdict(simulation.current_metrics()),
@@ -71,6 +76,51 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
             response.headers["Content-Disposition"] = f'attachment; filename="ai-evolution-seed-{simulation.seed}.{format}"'
             return response
 
+    @app.get("/api/batch/settings")
+    def batch_settings():
+        return jsonify(defaults=asdict(BatchConfig()), limits=asdict(batch.limits),
+                       integer_parameters=["initial_population", "initial_food", "food_cap"])
+
+    @app.route("/api/batch", methods=["GET", "POST"])
+    def batch_experiment():
+        if request.method == "GET":
+            return jsonify(batch.status())
+        try:
+            config = BatchConfig.from_dict(request.get_json(silent=True), batch.limits)
+            identity = batch.start(config)
+        except ValueError as error:
+            return jsonify(error=str(error)), 400
+        except RuntimeError as error:
+            return jsonify(error=str(error)), 409
+        return jsonify(batch_id=identity), 202
+
+    @app.post("/api/batch/cancel")
+    def cancel_batch():
+        data = request.get_json(silent=True)
+        try:
+            batch.cancel(data.get("batch_id") if isinstance(data, dict) else None)
+        except ValueError as error:
+            return jsonify(error=str(error)), 409
+        return jsonify(batch.status())
+
+    @app.get("/api/batch/<identity>/runs/<int:number>")
+    def batch_run(identity, number):
+        try:
+            return jsonify(batch.result(identity, number))
+        except ValueError as error:
+            return jsonify(error=str(error)), 404
+
+    @app.get("/api/batch/export.json")
+    def batch_export():
+        try:
+            data = batch.export(request.args.get("batch_id"))
+        except ValueError as error:
+            return jsonify(error=str(error)), 409
+        response = Response(json.dumps(data, indent=2, sort_keys=True, allow_nan=False),
+                            content_type="application/json")
+        response.headers["Content-Disposition"] = 'attachment; filename="ai-evolution-batch.json"'
+        return response
+
     @app.post("/api/control")
     def control():
         nonlocal simulation, run_id, running
@@ -86,18 +136,28 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
             action = data.get("action")
             if action != "reset" and "parameters" in data:
                 return jsonify(error="Model parameters can change only on reset"), 400
-            if action == "reset":
+            if action == "replay_batch":
+                try:
+                    result = batch.result(data.get("batch_id"), data.get("run_number"))
+                except ValueError as error:
+                    return jsonify(error=str(error)), 409
+                simulation = Simulation(SimulationConfig(**result["configuration"]), seed=result["seed"])
+                run_id = uuid4().hex
+                running = False
+            elif action == "reset":
                 seed_value = data.get("seed", simulation.seed)
                 if type(seed_value) is not int or abs(seed_value) > 2**53 - 1:
                     return jsonify(error="Seed must be a JavaScript-safe integer"), 400
                 updates = data.get("parameters", {})
-                allowed = {"initial_food", "food_spawn_rate", "movement_cost", "vision_cost",
+                allowed = {"initial_population", "initial_food", "food_spawn_rate", "movement_cost", "vision_cost",
                            "speed_mutation_probability", "vision_mutation_probability",
                            "speed_mutation_magnitude", "vision_mutation_magnitude"}
                 if not isinstance(updates, dict) or not updates.keys() <= allowed:
                     return jsonify(error="Unsupported reset parameters"), 400
                 try:
                     updated_config = replace(simulation.config, **updates)
+                    if "initial_population" in updates and updated_config.initial_population > batch.limits.max_initial_population:
+                        raise ValueError(f"Initial Population must be at most {batch.limits.max_initial_population}")
                 except ValueError as error:
                     return jsonify(error=str(error)), 400
                 simulation = Simulation(updated_config, seed=seed_value)

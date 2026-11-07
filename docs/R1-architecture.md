@@ -1,7 +1,7 @@
 # R1 software architecture
 
 Date: November 4, 2026  
-Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A through E are authorized; Milestone F and later require separate authorization.
+Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A through E and F.1 are authorized; F.2–F.5 require separate authorization.
 
 ## 1. Scope and decision authority
 
@@ -310,7 +310,7 @@ Planned commands after implementation:
 5. **Experiment reporting:** advanced controls, charts, exports, trait spreads/histograms, API replay tests and manual browser smoke test.
 6. **Calibration and acceptance:** multi-seed reports, performance measurements, late-run checks, documented baseline and limitations.
 
-Keep every stage runnable and testable. Milestones A through E are authorized. Do not begin Milestone F or later milestones without authorization.
+Keep every stage runnable and testable. Milestones A through E and F.1 are authorized. Do not begin F.2–F.5 without authorization.
 
 Milestone B implementation note: random search uses an analytic axis-folding calculation for reflected endpoints and outgoing headings, supporting multiple wall hits per tick. No swept encounters or interactions are implemented yet. Browser playback requests explicit bounded batches through the Flask adapter; it does not introduce a second physics loop. Canvas displays authoritative snapshots without interpolation. The server has no autonomous stepping thread, so only accepted advance/single-step requests move simulated time.
 
@@ -345,3 +345,6 @@ No additional technology or architectural framework is required to accommodate t
 Milestone E implementation note: a separate read-only MetricsCollector observes initial, periodic tick-end, and terminal states without RNG access. History retains the initial point plus the latest 9,999 measurements. The requested one-unit interval is exact at the default dt; non-dividing custom dt rounds upward to whole ticks, exposing the effective interval rather than splitting biological steps. Flask serves cursor-based history and stable-run CSV/JSON exports. Plain Canvas renders bounded envelopes and fixed-range current histograms at at most four redraws per second in the existing scrolling pane. See `R1-reporting.md` for definitions, retention gaps, endpoint exports, and limitations. Biological rules and defaults are unchanged; calibration remains Milestone F.
 
 Milestone E final reporting refinements: the Canvas scatter plot reuses paired traits from the existing authoritative living-organism payload, with fixed configured axes and deterministic overlap picking into the inspector. JSON adds an ID-sorted living-organism snapshot at final_time; aggregate histories and CSV schema are unchanged. No individual history, biological changes, random draws, or dependencies were added.
+
+
+Milestone F.1 adds a sequential batch runner in `experiments/r1/batch.py`, independent of Flask and animation. One daemon thread per application executes at most one batch at a time; each seed owns a separate engine and RNG. Locks protect progress/result publication, not physics execution, and cancellation is checked between ticks. Completed aggregate results/histories remain in memory and can be exported or replayed through the existing single-run controller. The two-tab UI reuses Canvas history rendering and SimulationConfig validation/defaults. See `R1-batch.md` for limits, denominators, replay, API and lifecycle details. No calibration, biological changes, multiprocessing, database, or F.2–F.5 features are included.

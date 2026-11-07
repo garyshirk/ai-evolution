@@ -2,11 +2,11 @@
 
 A laboratory for independent, agent-based evolutionary experiments. The simulation engine is Python; Flask and Canvas provide a local browser interface. Organisms are simple rule-based software entities, with no LLM agents.
 
-## Current release: R1, Milestone E
+## Current release: R1, Milestone F.1
 
 Implemented: seeded initialization, fixed decision ticks, search and pursuit, full-path food competition, continuous energy costs, Poisson replenishment, starvation/age death, asexual reproduction, trait inheritance and mutation, and browser controls and inspection.
 
-Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Milestone E adds descriptive evolutionary charts and exports. Population calibration (Milestone F) is not implemented. Starting defaults have only undergone smoke testing.
+Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Milestone E adds descriptive evolutionary charts and exports. Milestone F.1 adds sequential batch experiments; calibration and F.2–F.5 remain unimplemented. Starting defaults have only undergone smoke testing.
 
 ## Launch locally
 
@@ -28,6 +28,7 @@ Flask and its dependencies are already installed. To recreate the tested environ
 
 - Start/Resume runs the current experiment; Pause drains the current short batch and preserves state. Single step advances one decision tick, including all continuous events inside it.
 - Reset rebuilds the experiment. Seed, food rate, movement coefficient, and vision coefficient edits take effect only on Reset. Start/Resume never silently applies pending model edits.
+- **Initial Population** defaults to 50, accepts nonnegative integers, and applies on Reset. It uses the same configurable initial-population limit as batch execution (500 by default). Opening a batch replay fills this field from that run; exports record the applied population. Zero starts an extinct world.
 - Advanced also provides **Initial Food**, a nonnegative integer no greater than the configured food cap (default 500). It defaults to 200 and is independent of the replenishment rate, which still defaults to 8. For scarcity, set Initial Food to 10 and Food / time to 0.1, then Reset. Zero initial food and zero replenishment are supported independently.
 - Food / time accepts fractional rates such as 0.05, 0.1, 0.5, and 1.0. Its spinner increment is 0.5, but manually typed rates are validated as finite nonnegative numbers rather than restricted to spinner multiples.
 - Advanced mutation settings provide independent per-trait probabilities and magnitudes, also applied only on Reset. Values are fractions: 0.05 means a 5% chance per birth or a perturbation up to 5% of the allowed trait range. Set both probabilities to zero for exact inheritance without mutation.
@@ -48,6 +49,18 @@ The collapsible Reports section contains population, mean inherited maximum spee
 Samples include initialization, every one simulated time unit at the default dt, and exact extinction. Custom dt rounds the requested interval upward to whole ticks (dt 0.3 gives 1.2 units); metadata records the effective interval. Pause preserves history; Reset starts a new history. Retention is 10,000 points: the initial point and latest 9,999. Lost middle history is explicitly marked; exports contain retained points only. Charts redraw at most four times per second with a bounded display envelope, independently of physics.
 
 Export CSV and Export JSON pause playback and download the applied run, including its current endpoint. Pending settings are excluded. JSON also records seed, full configuration, engine/Python versions, final statistics, reporting metadata, and a living-organism snapshot (traits, lineage, generation, age, energy, and offspring count). Downloads do not save resumable simulation state. See the reporting document for column definitions and retention details.
+
+## Batch Experiments
+
+Switch to **Batch Experiments** to configure independent, sequential engine runs without animation. Defaults are 20 runs, 2,000 simulated units each, starting seed 0; all biological defaults come from the existing SimulationConfig. Seeds increase by one. The main controls expose population, food, costs and mutation; Additional R1 parameters exposes all remaining configuration fields.
+
+Run Experiment starts a background worker. Progress shows completed/total runs and current run/time; Cancel stops between physics ticks and preserves completed runs. Changing tabs preserves results. Opening Batch Experiments pauses the animated single run. It can be resumed independently while the batch continues, sharing CPU resources.
+
+Select a completed run to see its configuration, statistics, and population/trait histories. **Open in Single Simulation** replaces the single run with a fresh, paused time-zero replay using the selected seed and complete applied configuration. Export Batch JSON downloads the batch configuration, software/Python versions, every completed run's result/history, summary definitions, and completion/cancellation/error status. Export before starting a replacement batch; one batch is held in memory, and server restart loses it.
+
+Average final population includes extinct completed runs as zero. Trait averages are equally weighted means of surviving-run means; extinct trait values remain unavailable, and the displayed denominator is explicit. Cancelled partial runs are excluded from all summary statistics. Results are descriptive, not a calibration or fitness analysis.
+
+Default safeguards: 200 runs, duration 10,000, 2,000,000 total requested ticks, 500 initial organisms, food cap 2,000, and a conservative 500,000-measurement budget. Duration must align with full dt ticks. Resource guards stop and report an oversized run without culling; a single tick is not preemptible. See [batch architecture, API and limitations](docs/R1-batch.md) and [verification procedure](docs/Milestone-F1-verification.md).
 
 ## Run headlessly
 
@@ -99,7 +112,7 @@ Configuration and traits are frozen dataclasses. Engine state is private; snapsh
 
 One private `random.Random(seed)` drives initialization, searching, spawning, and exact conflict resolution in canonical order. Snapshot reads and browser rendering do not draw from it. Repeatability is supported for the same engine/runtime environment, seed, configuration, and step count; cross-version/platform bit identity is not promised. Food/organism IDs use separate monotonic namespaces starting at 1.
 
-Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone E. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
+Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone F.1. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
 
 ## Model and project documentation
 
@@ -112,4 +125,4 @@ Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` recor
 
 Long runs can accumulate many organisms and archived death records; the death archive has no retention limit, and no artificial population cap has been introduced. Reporting history is bounded separately. Runtime and memory use should be measured before extensive runs. Persistence is not established by the smoke tests.
 
-Next is Milestone F: population calibration and systematic evolutionary experiments. It has not been started.
+Milestone F.1 is implemented. F.2–F.5 require separate authorization; no calibration or new biological mechanisms are included.

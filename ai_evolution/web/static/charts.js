@@ -52,7 +52,7 @@ function axes(ctx, width, height, xMin, xMax, yMin, yMax, xLabel) {
   return box;
 }
 
-function line(canvas, rows, key, min, max, color) {
+export function line(canvas, rows, key, min, max, color) {
   const target = surface(canvas); if (!target) return;
   const {ctx, width, height} = target;
   const first = rows[0]?.time ?? 0, last = rows.at(-1)?.time ?? 0;

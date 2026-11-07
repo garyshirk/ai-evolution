@@ -9,8 +9,13 @@
 </head>
 <body>
   <header><div class="eyebrow">AI EVOLUTION / EXPERIMENT 01</div><h1>A world in motion</h1>
-    <p>R1 · Milestone E — evolutionary reporting and visualization.</p></header>
-  <main>
+    <p>R1 · Milestone F.1 — batch experiments with Milestone E reporting.</p></header>
+  <div class="application-body">
+    <nav class="application-tabs" role="tablist" aria-label="Simulation mode">
+      <button id="single-tab" role="tab" aria-selected="true" aria-controls="single-panel">Single Simulation</button>
+      <button id="batch-tab" role="tab" aria-selected="false" aria-controls="batch-panel">Batch Experiments</button>
+    </nav>
+  <main id="single-panel" role="tabpanel" aria-labelledby="single-tab">
     <section class="world-panel" aria-label="Environment">
       <div class="world-heading"><span>THE ENVIRONMENT</span><span><i class="org-key"></i> Organism <i class="food-key"></i> Food</span></div>
       <div class="world-stage"><canvas id="world" aria-label="Simulation world. Click an organism to inspect it."></canvas></div>
@@ -22,6 +27,7 @@
         <button id="step">Single step</button><button id="reset">Reset</button>
         <label>Playback <select id="speed"><option value="0.25">0.25×</option><option value="1" selected>1×</option><option value="5">5×</option><option value="20">20×</option></select></label>
         <label>Seed for next reset <input id="seed" value="0" inputmode="numeric" size="10"></label>
+        <label>Initial Population <input id="initial-population" type="number" min="0" step="1" value="50"></label>
         <label>Food / time <input id="food-rate" type="number" min="0" step="0.5" value="8"></label>
         <label>Movement cost <input id="movement-cost" type="number" min="0" step="0.01" value="0.05"></label>
         <label>Vision cost <input id="vision-cost" type="number" min="0" step="0.01" value="0.1"></label>
@@ -63,5 +69,35 @@
       </details>
     </div>
   </main>
+  <section id="batch-panel" role="tabpanel" aria-labelledby="batch-tab" hidden>
+    <h2>Batch Experiments</h2>
+    <p class="hint">Independent sequential R1 runs without animation. A new batch replaces previous batch results in memory; export them first. Switching tabs preserves results.</p>
+    <form id="batch-form">
+      <fieldset id="batch-fields"><legend>Experiment configuration</legend>
+        <div id="batch-settings" class="batch-fields"></div>
+        <details><summary>Additional R1 parameters</summary><div id="batch-advanced" class="batch-fields"></div></details>
+      </fieldset>
+      <p id="batch-limits" class="hint"></p>
+      <div class="toolbar"><button id="batch-run" type="submit">Run Experiment</button><button id="batch-cancel" type="button" disabled>Cancel</button><button id="batch-export" type="button" disabled>Export Batch JSON</button></div>
+    </form>
+    <p id="batch-error" role="alert" hidden></p>
+    <p id="batch-progress" role="status">No experiment started.</p><progress id="batch-progress-bar" value="0" max="1" aria-label="Completed batch runs"></progress>
+    <section id="batch-summary" class="metrics" aria-label="Batch summary"></section>
+    <p id="batch-definitions" class="hint"></p>
+    <label>Completed run <select id="batch-result"><option value="">Select a completed run</option></select></label>
+    <section id="batch-detail" hidden>
+      <div class="toolbar"><h3 id="batch-run-title"></h3><button id="batch-replay" type="button">Open in Single Simulation</button></div>
+      <p class="hint">Opens a fresh replay at time zero, replacing the current single simulation. No animation is stored in batch results.</p>
+      <dl id="batch-run-stats"></dl>
+      <details><summary>Applied configuration</summary><pre id="batch-run-config"></pre></details>
+      <p id="batch-history-note" class="hint"></p>
+      <div class="batch-charts">
+        <figure><figcaption>Living population · organisms</figcaption><div class="chart-box"><canvas class="report-chart" id="batch-population" role="img" aria-label="Selected run population history"></canvas></div></figure>
+        <figure><figcaption>Mean inherited maximum speed</figcaption><div class="chart-box"><canvas class="report-chart" id="batch-speed" role="img" aria-label="Selected run mean speed history"></canvas></div></figure>
+        <figure><figcaption>Mean inherited vision radius</figcaption><div class="chart-box"><canvas class="report-chart" id="batch-vision" role="img" aria-label="Selected run mean vision history"></canvas></div></figure>
+      </div>
+    </section>
+  </section>
+  </div>
 </body>
 </html>

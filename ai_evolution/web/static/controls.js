@@ -1,6 +1,7 @@
 import {request} from "./api.js";
 import {WorldView} from "./world.js";
 import {Reports} from "./charts.js";
+import {setupBatch} from "./batch.js";
 
 const $ = id => document.getElementById(id);
 let report, selected = "", playing = false, busy = false, pending = null;
@@ -9,6 +10,7 @@ const view = new WorldView($("world"), id => { selected = id; refresh(); });
 const reports = new Reports(id => { selected = String(id); refresh(); });
 const format = value => Number(value).toFixed(3);
 const parameterFields = [
+  ["initial-population", "initial_population"],
   ["initial-food", "initial_food"],
   ["food-rate", "food_spawn_rate"], ["movement-cost", "movement_cost"], ["vision-cost", "vision_cost"],
   ["speed-mutation-probability", "speed_mutation_probability"],
@@ -74,12 +76,12 @@ function refresh() {
 function control(action, extra = {}) {
   return request("/api/control", {action, run_id: report.run_id, expected_step: report.state.step_count, ...extra});
 }
-async function command(action) {
-  if (busy || !report) return;
+async function command(action, supplied = {}) {
+  if (busy || !report) return false;
   busy = true; playing = false; credit = 0; refresh();
   try {
     if (pending) await pending;
-    const extra = {};
+    const extra = {...supplied};
     if (action === "reset") {
       const text = $("seed").value.trim();
       if (!/^-?\d+$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error("Enter a safe integer seed; it takes effect on Reset.");
@@ -90,6 +92,9 @@ async function command(action) {
         const value = Number(textValue);
         if (!textValue || !Number.isFinite(value) || value < 0) throw new Error("Model settings must be finite nonnegative numbers.");
         if (name.endsWith("probability") && value > 1) throw new Error("Mutation probabilities must be between 0 and 1.");
+        if (name === "initial_population" && (!Number.isSafeInteger(value) || value > report.population_limit)) {
+          throw new Error(`Initial Population must be a nonnegative integer at most ${report.population_limit}.`);
+        }
         if (name === "initial_food" && (!Number.isSafeInteger(value) || value > report.parameters.food_cap)) {
           throw new Error(`Initial Food must be a nonnegative integer at most ${report.parameters.food_cap}.`);
         }
@@ -97,15 +102,22 @@ async function command(action) {
       }
     }
     accept(await control(action, extra));
-    if (action === "reset") { selected = ""; $("seed").value = report.seed; }
+    if (action === "reset" || action === "replay_batch") {
+      selected = ""; $("seed").value = report.seed;
+      for (const [id, name] of parameterFields) $(id).value = report.parameters[name];
+      $("initial-food").max = report.parameters.food_cap;
+      $("initial-population").max = report.population_limit;
+    }
     playing = report.running;
     $("error").hidden = true;
+    return true;
   } catch (error) {
     showError(error);
     try {
       accept(await request("/api/state"));
       if (report.running) accept(await control("pause"));
     } catch { /* Keep last authoritative snapshot; scheduling remains stopped. */ }
+    return false;
   } finally { busy = false; previousTime = performance.now(); refresh(); }
 }
 for (const action of ["start", "pause", "step", "reset"]) $(action).addEventListener("click", () => command(action));
@@ -133,13 +145,18 @@ function frame(now) {
       }).catch(error => { playing = false; showError(error); }).finally(() => { pending = null; refresh(); });
     }
   }
-  view.draw(); reports.tick(now); requestAnimationFrame(frame);
+  if (!$("single-panel").hidden) { view.draw(); reports.tick(now); }
+  requestAnimationFrame(frame);
 }
 try {
   accept(await request("/api/state")); $("seed").value = report.seed;
   for (const [id, name] of parameterFields) $(id).value = report.parameters[name];
   $("initial-food").max = report.parameters.food_cap;
+  $("initial-population").max = report.population_limit;
   // A reloaded page explicitly pauses the existing local run before scheduling.
   await command("pause");
 } catch (error) { showError(error); }
 requestAnimationFrame(frame);
+
+setupBatch({pause: () => command("pause"),
+  replay: (batch_id, run_number) => command("replay_batch", {batch_id, run_number})}).catch(showError);
