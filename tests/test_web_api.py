@@ -22,7 +22,7 @@ class WebTests(unittest.TestCase):
     def test_page_and_assets(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Milestone D", response.data)
+        self.assertIn(b"Milestone E", response.data)
         response.close()
         for name in ("controls.js", "api.js", "world.js", "styles.css"):
             response = self.client.get(f"/static/{name}")

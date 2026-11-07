@@ -4,13 +4,14 @@ import argparse
 from dataclasses import asdict
 import json
 import platform
+from pathlib import Path
 
 from . import __version__
 from .experiments.r1 import Simulation, SimulationConfig
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="AI Evolution — Milestone D (includes Milestone A foundation)")
+    parser = argparse.ArgumentParser(description="AI Evolution — Milestone E (includes Milestone A foundation)")
     commands = parser.add_subparsers(dest="command", required=True)
     serve = commands.add_parser("serve", help="Launch the local browser interface")
     serve.add_argument("--port", type=int, default=5000)
@@ -27,6 +28,8 @@ def main(argv: list[str] | None = None) -> int:
                           help="Shared speed/vision mutation probability; independent engine settings remain available")
     headless.add_argument("--mutation-magnitude", type=float, default=0.05,
                           help="Mutation perturbation scale as a fraction of each trait range")
+    headless.add_argument("--export-json", type=Path, help="Write a structured experiment report")
+    headless.add_argument("--export-csv", type=Path, help="Write retained measurements as CSV")
     args = parser.parse_args(argv)
     if args.command == "serve":
         from .web.app import create_app
@@ -46,8 +49,17 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as error:
         parser.error(str(error))
     state = simulation.snapshot()
+    if args.export_json or args.export_csv:
+        from .experiments.r1.exports import export_csv, export_json
+        try:
+            if args.export_json:
+                args.export_json.write_text(export_json(simulation), encoding="utf-8")
+            if args.export_csv:
+                args.export_csv.write_text(export_csv(simulation), encoding="utf-8", newline="")
+        except OSError as error:
+            parser.error(f"Could not write export: {error}")
     print(json.dumps({
-        "milestone": "D", "biology_implemented": True, "reproduction_implemented": True,
+        "milestone": "E", "biology_implemented": True, "reproduction_implemented": True,
         "search_movement_implemented": True,
         "engine_version": __version__, "python_version": platform.python_version(),
         "seed": simulation.seed, "parameters": asdict(config),
@@ -55,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         "time": state.time, "is_terminal": state.is_terminal,
         "state": asdict(state),
         "summary": state.summary(),
+        "reporting": simulation.metric_history(), "current_measurement": asdict(simulation.current_metrics()),
     }, sort_keys=True, allow_nan=False))
     return 0
 

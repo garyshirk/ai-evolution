@@ -94,4 +94,4 @@ The simple resolver scans candidate organisms and foods, with an exact segment-b
 
 ## Milestone scope
 
-Defaults remain the architecture's starting values. No calibration has been attempted, no population is artificially stabilized, and no food/energy rescue rule exists. Descendants may survive after the founders' lifespan, but persistence is not guaranteed. Only initial smoke observations are reported, not the later multi-seed 1,000-unit calibration target. No full evolutionary charts, explicit fitness score, social behavior, or LLM agents are implemented.
+Defaults remain the architecture's starting values. No calibration has been attempted, no population is artificially stabilized, and no food/energy rescue rule exists. Descendants may survive after the founders' lifespan, but persistence is not guaranteed. Only initial smoke observations are reported, not the later multi-seed 1,000-unit calibration target. Milestone E adds descriptive evolutionary charts and exports, documented in `R1-reporting.md`. No explicit fitness score, social behavior, or LLM agents are implemented.

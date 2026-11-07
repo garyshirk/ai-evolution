@@ -9,7 +9,7 @@
 </head>
 <body>
   <header><div class="eyebrow">AI EVOLUTION / EXPERIMENT 01</div><h1>A world in motion</h1>
-    <p>R1 · Milestone D — survival, reproduction, and inherited variation.</p></header>
+    <p>R1 · Milestone E — evolutionary reporting and visualization.</p></header>
   <main>
     <section class="world-panel" aria-label="Environment">
       <div class="world-heading"><span>THE ENVIRONMENT</span><span><i class="org-key"></i> Organism <i class="food-key"></i> Food</span></div>
@@ -46,6 +46,21 @@
         <label class="check"><input id="vision" type="checkbox" checked> Show selected vision radius</label>
         <dl id="inspection"><dt>No selection</dt><dd>Click a circle in the world.</dd></dl>
       </aside>
+      <details id="reports" class="reporting" open><summary>Evolutionary reports</summary>
+        <p class="hint">Descriptive measurements. Changes may reflect mutation, drift, population composition, and selection; these charts do not establish causation.</p>
+        <div class="export-actions"><button id="export-csv">Export CSV</button><button id="export-json">Export JSON</button></div>
+        <p class="hint">Export pauses the run. Files use applied settings and retained history, not pending edits.</p>
+        <p id="history-status" class="hint" role="status">Loading history…</p>
+        <figure><figcaption>Living population · organisms</figcaption><div class="chart-box"><canvas class="report-chart" id="population-chart" role="img" aria-label="Population history"></canvas></div></figure>
+        <figure><figcaption>Mean inherited maximum speed</figcaption><div class="chart-box"><canvas class="report-chart" id="speed-chart" role="img" aria-label="Mean speed history"></canvas></div></figure>
+        <figure><figcaption>Mean inherited vision radius</figcaption><div class="chart-box"><canvas class="report-chart" id="vision-chart" role="img" aria-label="Mean vision history"></canvas></div></figure>
+        <p id="distribution-status" class="hint"></p>
+        <figure><figcaption>Current inherited speed · orgs per bin</figcaption><div class="chart-box"><canvas class="report-chart" id="speed-histogram" role="img" aria-label="Speed distribution"></canvas></div></figure>
+        <figure><figcaption>Current inherited vision · orgs per bin</figcaption><div class="chart-box"><canvas class="report-chart" id="vision-histogram" role="img" aria-label="Vision distribution"></canvas></div></figure>
+        <figure><figcaption>Current inherited vision radius versus maximum speed</figcaption><div class="chart-box"><canvas class="report-chart" id="trait-scatter" role="img" aria-label="Speed versus vision for living organisms"></canvas></div></figure>
+        <p id="scatter-status" class="hint" role="status">Hover for exact traits; click to inspect. Repeated clicks cycle overlapping points.</p>
+        <p class="hint">Clusters and correlations do not establish selection. Offspring counts also depend on age and opportunity to reproduce.</p>
+      </details>
     </div>
   </main>
 </body>

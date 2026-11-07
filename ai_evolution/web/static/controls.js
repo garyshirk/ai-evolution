@@ -1,10 +1,12 @@
 import {request} from "./api.js";
 import {WorldView} from "./world.js";
+import {Reports} from "./charts.js";
 
 const $ = id => document.getElementById(id);
 let report, selected = "", playing = false, busy = false, pending = null;
 let credit = 0, previousTime = performance.now();
 const view = new WorldView($("world"), id => { selected = id; refresh(); });
+const reports = new Reports(id => { selected = String(id); refresh(); });
 const format = value => Number(value).toFixed(3);
 const parameterFields = [
   ["initial-food", "initial_food"],
@@ -16,7 +18,7 @@ const parameterFields = [
 ];
 
 function showError(error) { $("error").textContent = error.message; $("error").hidden = false; }
-function accept(next) { report = next; refresh(); }
+function accept(next) { report = next; reports.update(next); refresh(); }
 function refresh() {
   if (!report) return;
   view.update(report, selected);
@@ -27,11 +29,16 @@ function refresh() {
   $("pause").disabled = busy || !playing;
   $("step").disabled = busy || playing || report.is_terminal;
   $("reset").disabled = busy;
+  $("export-csv").disabled = busy;
+  $("export-json").disabled = busy;
   const rows = [["Seed", report.seed], ["Simulated time", format(report.time)], ["Steps", state.step_count],
     ["Living orgs", Object.keys(state.organisms).length], ["Food", Object.keys(state.food).length],
+    ["Initial orgs", report.parameters.initial_population],
     ["Births", report.summary.births], ["Highest generation", report.summary.highest_generation],
     ["Mean speed", report.summary.mean_speed === null ? "—" : format(report.summary.mean_speed)],
     ["Mean vision", report.summary.mean_vision === null ? "—" : format(report.summary.mean_vision)],
+    ["Speed SD", report.measurement.speed_stddev === null ? "—" : format(report.measurement.speed_stddev)],
+    ["Vision SD", report.measurement.vision_stddev === null ? "—" : format(report.measurement.vision_stddev)],
     ["Food consumed", state.statistics.food_consumed],
     ["Deaths", state.statistics.starvation_deaths + state.statistics.age_deaths],
     ["Starvation / age", `${state.statistics.starvation_deaths} / ${state.statistics.age_deaths}`],
@@ -102,6 +109,15 @@ async function command(action) {
   } finally { busy = false; previousTime = performance.now(); refresh(); }
 }
 for (const action of ["start", "pause", "step", "reset"]) $(action).addEventListener("click", () => command(action));
+for (const format of ["csv", "json"]) $(`export-${format}`).addEventListener("click", async () => {
+  if (busy || !report) return;
+  await command("pause");
+  if (report.running || busy) { showError(new Error("Pause the run before exporting.")); return; }
+  const link = document.createElement("a");
+  link.href = `/api/export.${format}?run_id=${encodeURIComponent(report.run_id)}`;
+  link.download = `ai-evolution-seed-${report.seed}.${format}`;
+  document.body.append(link); link.click(); link.remove();
+});
 $("speed").addEventListener("change", () => { credit = 0; previousTime = performance.now(); refresh(); });
 $("organism").addEventListener("change", event => { selected = event.target.value; refresh(); });
 $("vision").addEventListener("change", event => { view.showVision = event.target.checked; });
@@ -117,7 +133,7 @@ function frame(now) {
       }).catch(error => { playing = false; showError(error); }).finally(() => { pending = null; refresh(); });
     }
   }
-  view.draw(); requestAnimationFrame(frame);
+  view.draw(); reports.tick(now); requestAnimationFrame(frame);
 }
 try {
   accept(await request("/api/state")); $("seed").value = report.seed;

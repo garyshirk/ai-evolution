@@ -4,10 +4,12 @@ from dataclasses import asdict, replace
 from threading import Lock
 from uuid import uuid4
 
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, request
 
 from .. import __version__
 from ..experiments.r1 import Simulation, SimulationConfig
+from ..experiments.r1.metrics import distributions
+from ..experiments.r1.exports import export_csv, export_json
 
 
 def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flask:
@@ -21,10 +23,13 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
         state = simulation.snapshot()
         return {
             "run_id": run_id, "running": running, "seed": simulation.seed,
-            "engine_version": __version__, "milestone": "D",
+            "engine_version": __version__, "milestone": "E",
             "parameters": asdict(simulation.config), "state": asdict(state),
             "time": state.time, "is_terminal": state.is_terminal,
             "summary": state.summary(),
+            "measurement": asdict(simulation.current_metrics()),
+            "histograms": distributions(state, simulation.config),
+            "reporting": simulation.reporting_metadata(),
         }
 
     @app.after_request
@@ -40,6 +45,31 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0) -> Flas
     def state():
         with lock:
             return jsonify(report())
+
+    @app.get("/api/history")
+    def history():
+        with lock:
+            if request.args.get("run_id", run_id) != run_id:
+                return jsonify(error="History belongs to a different run"), 409
+            try:
+                cursor = request.args.get("after")
+                cursor = int(cursor) if cursor is not None else None
+                data = simulation.metric_history(cursor)
+            except ValueError as error:
+                return jsonify(error=str(error)), 400
+            return jsonify(run_id=run_id, **data)
+
+    @app.get("/api/export.<format>")
+    def download(format):
+        if format not in ("csv", "json"):
+            return jsonify(error="Export format must be csv or json"), 400
+        with lock:
+            if request.args.get("run_id", run_id) != run_id:
+                return jsonify(error="Export belongs to a different run"), 409
+            body = export_csv(simulation) if format == "csv" else export_json(simulation)
+            response = Response(body, content_type="text/csv; charset=utf-8" if format == "csv" else "application/json")
+            response.headers["Content-Disposition"] = f'attachment; filename="ai-evolution-seed-{simulation.seed}.{format}"'
+            return response
 
     @app.post("/api/control")
     def control():

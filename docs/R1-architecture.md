@@ -1,7 +1,7 @@
 # R1 software architecture
 
 Date: November 4, 2026  
-Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A through D are authorized; Milestone E and later require separate authorization.
+Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A through E are authorized; Milestone F and later require separate authorization.
 
 ## 1. Scope and decision authority
 
@@ -310,13 +310,13 @@ Planned commands after implementation:
 5. **Experiment reporting:** advanced controls, charts, exports, trait spreads/histograms, API replay tests and manual browser smoke test.
 6. **Calibration and acceptance:** multi-seed reports, performance measurements, late-run checks, documented baseline and limitations.
 
-Keep every stage runnable and testable. Milestones A through D are authorized. Do not begin Milestone E or later milestones without authorization.
+Keep every stage runnable and testable. Milestones A through E are authorized. Do not begin Milestone F or later milestones without authorization.
 
 Milestone B implementation note: random search uses an analytic axis-folding calculation for reflected endpoints and outgoing headings, supporting multiple wall hits per tick. No swept encounters or interactions are implemented yet. Browser playback requests explicit bounded batches through the Flask adapter; it does not introduce a second physics loop. Canvas displays authoritative snapshots without interpolation. The server has no autonomous stepping thread, so only accepted advance/single-step requests move simulated time.
 
 Milestone C implementation note: the engine splits motion at chronological events and solves swept disk encounters on every actual segment. Continuous expenses and immediate starvation/age death preempt food at the same computed time. Food spawns at its Poisson arrival time; shared simultaneous claims use seeded ordering and choices. Event segments are represented by the current `Motion` and elapsed interval rather than stored as a separate path-history object. Cumulative statistics and final death records support diagnostics and inspection. Reproduction and mutation were deferred at that milestone.
 
-Milestone D implementation note: `reproduction.py` applies tick-end eligibility, transfers and overhead, exact inheritance, independent reflected mutations, and disk placement. Eligible parents are processed in canonical ID order and newborns inserted after all existing parents have been considered. The ledger treats offspring reserves as internal transfers and overhead as an expense. The UI adds live summaries, lineage/birth inspection, a brief newborn ring, and reset-only Advanced mutation settings. Full time-series reporting and calibration remain deferred. See `R1-model.md` for the implemented rules and limitations.
+Milestone D implementation note: `reproduction.py` applies tick-end eligibility, transfers and overhead, exact inheritance, independent reflected mutations, and disk placement. Eligible parents are processed in canonical ID order and newborns inserted after all existing parents have been considered. The ledger treats offspring reserves as internal transfers and overhead as an expense. The UI adds live summaries, lineage/birth inspection, a brief newborn ring, and reset-only Advanced mutation settings. Full time-series reporting and calibration were deferred at that milestone. See `R1-model.md` for the implemented rules and limitations.
 
 Milestone D final refinements: the full environment is fitted to a viewport-sized pane with aspect ratio preserved, while surrounding controls/statistics/inspection scroll independently. This affects rendering and hit testing only. Advanced settings now expose Initial Food independently of the fractional replenishment rate, using the existing configuration validation and seeded initialization. Heading independence, requested mutation settings, fractional Poisson rates, and complete seeded trajectories are additionally verified; no biological rule or default was changed.
 
@@ -340,3 +340,8 @@ No behavioral approval points remain for Milestone A. Implement these rules only
 - Fixed lifespan, unbounded energy storage, trait bounds, and mutation reflection all affect results. Preserve their visibility in configuration, exports, and scientific interpretation.
 
 No additional technology or architectural framework is required to accommodate the approved revisions.
+
+
+Milestone E implementation note: a separate read-only MetricsCollector observes initial, periodic tick-end, and terminal states without RNG access. History retains the initial point plus the latest 9,999 measurements. The requested one-unit interval is exact at the default dt; non-dividing custom dt rounds upward to whole ticks, exposing the effective interval rather than splitting biological steps. Flask serves cursor-based history and stable-run CSV/JSON exports. Plain Canvas renders bounded envelopes and fixed-range current histograms at at most four redraws per second in the existing scrolling pane. See `R1-reporting.md` for definitions, retention gaps, endpoint exports, and limitations. Biological rules and defaults are unchanged; calibration remains Milestone F.
+
+Milestone E final reporting refinements: the Canvas scatter plot reuses paired traits from the existing authoritative living-organism payload, with fixed configured axes and deterministic overlap picking into the inspector. JSON adds an ID-sorted living-organism snapshot at final_time; aggregate histories and CSV schema are unchanged. No individual history, biological changes, random draws, or dependencies were added.

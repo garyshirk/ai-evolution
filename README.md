@@ -2,11 +2,11 @@
 
 A laboratory for independent, agent-based evolutionary experiments. The simulation engine is Python; Flask and Canvas provide a local browser interface. Organisms are simple rule-based software entities, with no LLM agents.
 
-## Current release: R1, Milestone D
+## Current release: R1, Milestone E
 
 Implemented: seeded initialization, fixed decision ticks, search and pursuit, full-path food competition, continuous energy costs, Poisson replenishment, starvation/age death, asexual reproduction, trait inheritance and mutation, and browser controls and inspection.
 
-Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Full evolutionary charts (Milestone E) and population calibration (Milestone F) are not implemented. Starting defaults have only undergone smoke testing.
+Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Milestone E adds descriptive evolutionary charts and exports. Population calibration (Milestone F) is not implemented. Starting defaults have only undergone smoke testing.
 
 ## Launch locally
 
@@ -41,6 +41,14 @@ Browser seeds are integers within JavaScript's safe range (±9,007,199,254,740,9
 
 The environment occupies a pane fitted to the available viewport, preserving the world's aspect ratio. Window resizing changes only rendering size, never world dimensions or physics. Controls, Advanced settings, statistics, and inspection scroll independently; the full environment stays visible. Narrow windows stack the world above a scrolling control pane. Canvas picking and vision overlays use the current fitted dimensions.
 
+## Evolutionary reports and exports
+
+The collapsible Reports section contains population, mean inherited maximum speed, and mean inherited vision history graphs, plus current speed/vision histograms and a paired speed-versus-vision scatter plot. Hover over scatter points for exact traits and click repeatedly to inspect overlapping organisms. Statistics include population standard deviations, initial population, cumulative births/deaths and death causes, and highest generation reached. Empty-population trait values are unavailable, not zero. Measurements describe changes without assigning evolutionary causes.
+
+Samples include initialization, every one simulated time unit at the default dt, and exact extinction. Custom dt rounds the requested interval upward to whole ticks (dt 0.3 gives 1.2 units); metadata records the effective interval. Pause preserves history; Reset starts a new history. Retention is 10,000 points: the initial point and latest 9,999. Lost middle history is explicitly marked; exports contain retained points only. Charts redraw at most four times per second with a bounded display envelope, independently of physics.
+
+Export CSV and Export JSON pause playback and download the applied run, including its current endpoint. Pending settings are excluded. JSON also records seed, full configuration, engine/Python versions, final statistics, reporting metadata, and a living-organism snapshot (traits, lineage, generation, age, energy, and offspring count). Downloads do not save resumable simulation state. See the reporting document for column definitions and retention details.
+
 ## Run headlessly
 
 ```sh
@@ -48,10 +56,11 @@ The environment occupies a pane fitted to the available viewport, preserving the
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --population 5 --food 0 --food-rate 0
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --movement-cost 0.1 --vision-cost 0.2
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --mutation-probability 0
+.venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --export-csv /tmp/r1.csv --export-json /tmp/r1.json
 .venv/bin/python -m ai_evolution --help
 ```
 
-The command prints JSON containing engine/Python versions, seed, parameters, requested/completed steps, time, terminal status, active state, death records, cumulative statistics, and a live summary including population energy and the energy-ledger residual. JSON object keys for IDs are strings. This is a full-state report, not the later time-series export system. Headless execution imports no Flask or browser modules.
+The command prints JSON containing engine/Python versions, seed, parameters, requested/completed steps, time, terminal status, active state, death records, cumulative statistics, and a live summary including population energy and the energy-ledger residual. JSON object keys for IDs are strings. It also includes collected reporting history. Use --export-csv PATH and --export-json PATH for portable time-series and experiment reports. Headless execution imports no Flask or browser modules.
 
 Options include `--seed` (0), `--steps` (0), `--population` (50), `--food` (200), `--dt` (0.1), `--food-rate` (8), `--movement-cost` (0.05), and `--vision-cost` (0.1). `--food 0` disables only initial food; also specify `--food-rate 0` to disable replenishment. Invalid inputs produce a CLI error. An initially empty population is terminal and advances zero ticks.
 
@@ -64,7 +73,7 @@ The CLI also accepts shared `--mutation-probability` and `--mutation-magnitude` 
 .venv/bin/python -m pip check
 ```
 
-Tests cover initialization/configuration, RNG isolation, movement/reflection, swept encounters and arrival ties, energy conservation, death, spawning/caps, reproduction thresholds and transfers, newborn timing, inheritance, independent mutation and reflection, lineage, population changes, replay/batching, Flask controls, and headless equivalence. No third-party test framework is needed. Earlier milestone invariants remain covered; resource-free founders still cannot reach the reproduction threshold.
+Tests cover initialization/configuration, RNG isolation, movement/reflection, swept encounters and arrival ties, energy conservation, death, spawning/caps, reproduction thresholds and transfers, newborn timing, inheritance, independent mutation and reflection, lineage, population changes, replay/batching, Flask controls, and headless equivalence. Reporting tests also verify moments, histograms, sampling/retention, exports, reset/extinction, and unchanged seeded outcomes with collection enabled or disabled. No third-party test framework is needed. Earlier milestone invariants remain covered; resource-free founders still cannot reach the reproduction threshold.
 
 ## Reproduction and mutation
 
@@ -90,7 +99,7 @@ Configuration and traits are frozen dataclasses. Engine state is private; snapsh
 
 One private `random.Random(seed)` drives initialization, searching, spawning, and exact conflict resolution in canonical order. Snapshot reads and browser rendering do not draw from it. Repeatability is supported for the same engine/runtime environment, seed, configuration, and step count; cross-version/platform bit identity is not promised. Food/organism IDs use separate monotonic namespaces starting at 1.
 
-Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone D. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
+Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone E. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
 
 ## Model and project documentation
 
@@ -98,8 +107,9 @@ Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` recor
 - [R1 requirements](docs/R1-requirements.md)
 - [Approved architecture](docs/R1-architecture.md)
 - [Implemented model, equations, update order, and numerical limitations](docs/R1-model.md)
-- [Milestone D verification and smoke observations](docs/Milestone-D-verification.md)
+- [Reporting definitions, sampling, retention, and export formats](docs/R1-reporting.md)
+- [Milestone E verification and smoke observations](docs/Milestone-E-verification.md)
 
-Long runs can accumulate many organisms and archived death records; no history retention limit or artificial population cap has been introduced. Runtime and memory use should be measured before extensive runs. Persistence is not established by the smoke tests.
+Long runs can accumulate many organisms and archived death records; the death archive has no retention limit, and no artificial population cap has been introduced. Reporting history is bounded separately. Runtime and memory use should be measured before extensive runs. Persistence is not established by the smoke tests.
 
-Next is Milestone E: evolutionary reporting and charts. It has not been started.
+Next is Milestone F: population calibration and systematic evolutionary experiments. It has not been started.
