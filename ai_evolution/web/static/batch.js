@@ -1,12 +1,13 @@
 import {request} from "./api.js";
 import {line} from "./charts.js";
+import {setupLibrary} from "./experiments.js";
 
 const $ = id => document.getElementById(id);
 const display = value => value === null || value === undefined ? "unavailable" :
   typeof value === "number" && !Number.isInteger(value) ? value.toFixed(3) : String(value);
 const label = name => name.replaceAll("_", " ").replace(/^./, text => text.toUpperCase());
 
-export async function setupBatch({pause, replay}) {
+export async function setupBatch({pause, replay, replayExperiment}) {
   let status, selectedRun = null, loading = false, selectedBatch = null;
   const settings = await request("/api/batch/settings");
   const integers = new Set(settings.integer_parameters);
@@ -108,7 +109,7 @@ export async function setupBatch({pause, replay}) {
       box.className = "metric"; name.textContent = label(key); value.textContent = display(summary[key]); box.append(name, value); return box;
     }));
     $("batch-definitions").textContent = summary.definitions;
-    if (status.error) error(new Error(status.error));
+    if (status.error || status.library_error) error(new Error(status.error || status.library_error));
     const menu = $("batch-result"), key = `${status.batch_id}:${status.completed_runs}`;
     if (menu.dataset.key !== key) {
       const previous = changed ? "" : menu.value;
@@ -159,5 +160,6 @@ export async function setupBatch({pause, replay}) {
     link.download = "ai-evolution-batch.json"; document.body.append(link); link.click(); link.remove();
   });
   new ResizeObserver(draw).observe($("batch-panel"));
+  setupLibrary({replay: replayExperiment, openSingle: () => tab(false)});
   poll();
 }

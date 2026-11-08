@@ -2,11 +2,11 @@
 
 A laboratory for independent, agent-based evolutionary experiments. The simulation engine is Python; Flask and Canvas provide a local browser interface. Organisms are simple rule-based software entities, with no LLM agents.
 
-## Current release: R1, Milestone F.1
+## Current release: R1, Milestone F.2
 
 Implemented: seeded initialization, fixed decision ticks, search and pursuit, full-path food competition, continuous energy costs, Poisson replenishment, starvation/age death, asexual reproduction, trait inheritance and mutation, and browser controls and inspection.
 
-Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Milestone E adds descriptive evolutionary charts and exports. Milestone F.1 adds sequential batch experiments; calibration and F.2–F.5 remain unimplemented. Starting defaults have only undergone smoke testing.
+Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Milestone E adds descriptive evolutionary charts and exports. Milestone F.1 adds sequential batch experiments; F.2 adds an experiment library, descriptive statistics, aggregate trajectories and paired-seed comparisons; F.3–F.5 remain unimplemented. Starting defaults have only undergone smoke testing.
 
 ## Launch locally
 
@@ -56,11 +56,25 @@ Switch to **Batch Experiments** to configure independent, sequential engine runs
 
 Run Experiment starts a background worker. Progress shows completed/total runs and current run/time; Cancel stops between physics ticks and preserves completed runs. Changing tabs preserves results. Opening Batch Experiments pauses the animated single run. It can be resumed independently while the batch continues, sharing CPU resources.
 
-Select a completed run to see its configuration, statistics, and population/trait histories. **Open in Single Simulation** replaces the single run with a fresh, paused time-zero replay using the selected seed and complete applied configuration. Export Batch JSON downloads the batch configuration, software/Python versions, every completed run's result/history, summary definitions, and completion/cancellation/error status. Export before starting a replacement batch; one batch is held in memory, and server restart loses it.
+Select a completed run to see its configuration, statistics, and population/trait histories. **Open in Single Simulation** replaces the single run with a fresh, paused time-zero replay using the selected seed and complete applied configuration. Export Batch JSON downloads the batch configuration, software/Python versions, every completed run's result/history, summary definitions, and completion/cancellation/error status. Export before starting a replacement batch; the current runner batch is held in memory, and server restart loses it. Successfully completed batches are also added to the separate experiment library.
 
 Average final population includes extinct completed runs as zero. Trait averages are equally weighted means of surviving-run means; extinct trait values remain unavailable, and the displayed denominator is explicit. Cancelled partial runs are excluded from all summary statistics. Results are descriptive, not a calibration or fitness analysis.
 
 Default safeguards: 200 runs, duration 10,000, 2,000,000 total requested ticks, 500 initial organisms, food cap 2,000, and a conservative 500,000-measurement budget. Duration must align with full dt ticks. Resource guards stop and report an oversized run without culling; a single tick is not preemptible. See [batch architecture, API and limitations](docs/R1-batch.md) and [verification procedure](docs/Milestone-F1-verification.md).
+
+## Statistical analysis and comparison (F.2)
+
+Batch Experiments now has **Run**, **Results**, and **Compare** views. Run retains execution/progress/cancellation and current-batch export. Successfully completed batches are automatically retained in Results; starting a new batch preserves the library. Results also imports F.1 batch JSON files (filename becomes the editable name), selects/renames/removes experiments, exports the original batch schema, and inspects/replays individual runs. Imports are analyzed without rerunning their simulations.
+
+The library holds up to 8 experiments / 1,000,000 measurement rows in server memory, with a 256 MiB per-file/request limit. Server restart clears it: use JSON files for storage. A full library leaves previous experiments intact and reports that the newly completed batch must be exported and imported after freeing space.
+
+Results shows across-run means, sample SD (N−1), medians and ranges for final population, surviving-run trait means and observed minimum populations. Sample SD is unavailable for fewer than two observations. Bottleneck threshold 5 is exploratory; only post-initial retained samples count, so between-sample events can be missed. Aggregate Canvas charts show means and 10th–90th percentile bands, with contributing run counts available by recorded time. Extinct runs contribute zero population through planned duration; their traits remain unavailable. Missing or incompatible schedules disable aggregate trajectories with an explanation, rather than interpolation.
+
+Compare selects exactly two experiments. It highlights all configuration differences, shows side-by-side statistics and B−A differences/percentage changes, and enables paired differences only for identical completed seed sets (trait pairs require survival in both). Equal durations and compatible recorded time axes are required for overlaid trajectories. Different final endpoints and multiple changed parameters trigger warnings. These are descriptive comparisons, not significance tests or causal conclusions.
+
+Replay supports known unchanged-model releases 0.6.0 and 0.7.0 with the same Python version. Incompatible exports can be analyzed, but their replay is disabled with a reason. The full applied configuration and seed, including Initial Population, initialize a fresh paused single run.
+
+See [statistical definitions and limits](docs/R1-statistics.md) and [F.2 verification checklist](docs/Milestone-F2-verification.md).
 
 ## Run headlessly
 
@@ -112,7 +126,7 @@ Configuration and traits are frozen dataclasses. Engine state is private; snapsh
 
 One private `random.Random(seed)` drives initialization, searching, spawning, and exact conflict resolution in canonical order. Snapshot reads and browser rendering do not draw from it. Repeatability is supported for the same engine/runtime environment, seed, configuration, and step count; cross-version/platform bit identity is not promised. Food/organism IDs use separate monotonic namespaces starting at 1.
 
-Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone F.1. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
+Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone F.2. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
 
 ## Model and project documentation
 
@@ -125,4 +139,4 @@ Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` recor
 
 Long runs can accumulate many organisms and archived death records; the death archive has no retention limit, and no artificial population cap has been introduced. Reporting history is bounded separately. Runtime and memory use should be measured before extensive runs. Persistence is not established by the smoke tests.
 
-Milestone F.1 is implemented. F.2–F.5 require separate authorization; no calibration or new biological mechanisms are included.
+Milestones F.1 and F.2 are implemented. F.3–F.5 require separate authorization; no calibration or new biological mechanisms are included.

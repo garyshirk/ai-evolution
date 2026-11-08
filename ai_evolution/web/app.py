@@ -2,6 +2,7 @@
 
 from dataclasses import asdict, replace
 import json
+import math
 from threading import Lock
 from uuid import uuid4
 
@@ -12,6 +13,8 @@ from ..experiments.r1 import Simulation, SimulationConfig
 from ..experiments.r1.metrics import distributions
 from ..experiments.r1.exports import export_csv, export_json
 from ..experiments.r1.batch import BatchConfig, BatchRunner
+from ..experiments.r1.library import ExperimentLibrary, MAX_IMPORT_BYTES, replay_issue
+from werkzeug.exceptions import RequestEntityTooLarge
 
 
 def create_app(config: SimulationConfig | None = None, *, seed: int = 0, batch_limits=None) -> Flask:
@@ -20,7 +23,13 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0, batch_l
     lock = Lock()
     run_id = uuid4().hex
     running = False
-    batch = BatchRunner(batch_limits)
+    library = ExperimentLibrary()
+    def save_experiment(data):
+        config = data["configuration"]
+        return library.add(data, f"Seeds {config['starting_seed']}–{config['starting_seed'] + config['runs'] - 1} · food {config['simulation']['food_spawn_rate']}")
+    batch = BatchRunner(batch_limits, on_complete=save_experiment)
+    app.extensions["experiment_library"] = library
+    app.config["MAX_CONTENT_LENGTH"] = MAX_IMPORT_BYTES
     app.extensions["batch_runner"] = batch
 
     def report():
@@ -75,6 +84,82 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0, batch_l
             response = Response(body, content_type="text/csv; charset=utf-8" if format == "csv" else "application/json")
             response.headers["Content-Disposition"] = f'attachment; filename="ai-evolution-seed-{simulation.seed}.{format}"'
             return response
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def oversized_import(error):
+        return jsonify(error="Import exceeds the 256 MiB request limit."), 413
+
+    @app.get("/api/experiments")
+    def experiments():
+        return jsonify(experiments=library.list())
+
+    @app.post("/api/experiments/import")
+    def import_experiment():
+        try:
+            if not request.is_json:
+                raise ValueError("Import requires an R1 batch JSON file.")
+            def invalid_constant(value):
+                raise ValueError(f"Nonfinite JSON value: {value}")
+            def finite_float(text):
+                value = float(text)
+                if not math.isfinite(value):
+                    raise ValueError("Nonfinite JSON number")
+                return value
+            data = json.load(request.stream, parse_constant=invalid_constant, parse_float=finite_float)
+            return jsonify(library.add(data, request.args.get("name", "Imported experiment"))), 201
+        except (ValueError, TypeError, RecursionError, UnicodeError) as error:
+            return jsonify(error=f"Invalid experiment import: {error}"), 400
+
+    @app.route("/api/experiments/<identity>", methods=["GET", "DELETE"])
+    def experiment(identity):
+        try:
+            if request.method == "DELETE":
+                library.remove(identity)
+                return jsonify(removed=True)
+            entry = library.get(identity)
+            data = entry["data"]
+            return jsonify(**library.metadata(entry), statistics=entry["statistics"], trajectories=entry["trajectories"],
+                           replay_issue=replay_issue(data["results"][0]) if data["results"] else "No completed runs.",
+                           runs=[{"run_number": row["run_number"], "seed": row["seed"], "stop_reason": row["stop_reason"],
+                                  "final_population": row["final_statistics"]["population"]} for row in data["results"]])
+        except ValueError as error:
+            return jsonify(error=str(error)), 404
+
+    @app.post("/api/experiments/<identity>/name")
+    def rename_experiment(identity):
+        data = request.get_json(silent=True)
+        try:
+            library.rename(identity, data.get("name") if isinstance(data, dict) else None)
+            return jsonify(renamed=True)
+        except ValueError as error:
+            return jsonify(error=str(error)), 400
+
+    @app.get("/api/experiments/<identity>/runs/<int:number>")
+    def experiment_run(identity, number):
+        try:
+            runs = library.get(identity)["data"]["results"]
+            if not 1 <= number <= len(runs):
+                raise ValueError("Completed run not found.")
+            return jsonify(**runs[number - 1], replay_issue=replay_issue(runs[number - 1]))
+        except ValueError as error:
+            return jsonify(error=str(error)), 404
+
+    @app.get("/api/experiments/<identity>/export.json")
+    def export_experiment(identity):
+        try:
+            data = library.get(identity)["data"]
+            response = Response(json.dumps(data, indent=2, sort_keys=True, allow_nan=False), content_type="application/json")
+            response.headers["Content-Disposition"] = 'attachment; filename="ai-evolution-experiment.json"'
+            return response
+        except ValueError as error:
+            return jsonify(error=str(error)), 404
+
+    @app.get("/api/experiments/compare")
+    def compare():
+        try:
+            return jsonify(library.compare(request.args.get("a"), request.args.get("b")))
+        except ValueError as error:
+            return jsonify(error=str(error)), 400
 
     @app.get("/api/batch/settings")
     def batch_settings():
@@ -136,7 +221,24 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0, batch_l
             action = data.get("action")
             if action != "reset" and "parameters" in data:
                 return jsonify(error="Model parameters can change only on reset"), 400
-            if action == "replay_batch":
+            if action == "replay_experiment":
+                try:
+                    runs = library.get(data.get("experiment_id"))["data"]["results"]
+                    number = data.get("run_number")
+                    if type(number) is not int or not 1 <= number <= len(runs):
+                        raise ValueError("Completed run not found.")
+                    result = runs[number - 1]
+                    issue = replay_issue(result)
+                    if issue:
+                        raise ValueError(issue)
+                    if result["configuration"]["initial_population"] > batch.limits.max_initial_population:
+                        raise ValueError("Replay initial population exceeds this application's limit.")
+                except ValueError as error:
+                    return jsonify(error=str(error)), 409
+                simulation = Simulation(SimulationConfig(**result["configuration"]), seed=result["seed"])
+                run_id = uuid4().hex
+                running = False
+            elif action == "replay_batch":
                 try:
                     result = batch.result(data.get("batch_id"), data.get("run_number"))
                 except ValueError as error:

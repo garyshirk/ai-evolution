@@ -25,7 +25,7 @@ function envelope(rows, key, buckets = 200) {
   return [...chosen].sort((a, b) => a - b).map(i => rows[i]);
 }
 
-function surface(canvas) {
+export function surface(canvas) {
   const rect = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   if (rect.width < 1 || rect.height < 1) return null;
   const width = Math.round(rect.width * dpr), height = Math.round(rect.height * dpr);
@@ -37,7 +37,7 @@ function surface(canvas) {
   return {ctx, width:rect.width, height:rect.height};
 }
 
-function axes(ctx, width, height, xMin, xMax, yMin, yMax, xLabel) {
+export function axes(ctx, width, height, xMin, xMax, yMin, yMax, xLabel) {
   const box = {left:42, top:12, width:Math.max(1, width - 54), height:Math.max(1, height - 46)};
   ctx.textAlign = "right";
   for (const fraction of [0, 0.5, 1]) {

@@ -49,7 +49,7 @@ Completed-run aggregates:
 - No completed runs means unavailable averages/percentage, not zero evidence of survival. No survivors means unavailable trait means.
 - Cancelled partial and failed unfinished runs are excluded. The completed/requested counts make that incomplete sampling explicit; cancellation can bias any observed summary.
 
-The UI shows initial/cumulative/current statistics with the same definitions as Milestone E. Charts reuse its bounded Canvas line renderer and display gaps and unavailable means correctly. No confidence intervals, cross-batch comparisons, reproductive fitness estimates, automatic conclusions, neutral traits or calibration are included.
+The UI shows initial/cumulative/current statistics with the same definitions as Milestone E. Charts reuse its bounded Canvas line renderer and display gaps and unavailable means correctly. F.1 summary statistics remain unchanged. F.2 adds descriptive cross-batch analysis separately; no confidence intervals, reproductive fitness estimates, automatic conclusions, neutral traits or calibration are included.
 
 ## Replay and exports
 
@@ -59,7 +59,7 @@ Batch JSON schema version 1 contains `configuration` (runs, duration, starting_s
 
 The UI enables export once a batch is completed, cancelled, or failed. The API also supports an internally consistent snapshot of completed runs during execution, marked running/cancelling as appropriate. No CSV batch format or resumable checkpoint is added.
 
-Only the current batch is retained. Starting another validated batch replaces earlier results; export first. Browser reload can recover current progress/completed results from the same running server, although edited form values and selection may reset. Server shutdown/restart loses memory, stops the daemon worker, and does not resume interrupted work. Bounded summaries/history do not make JSON zero-cost; large exports may temporarily allocate additional memory. No batch persistence or application-exit cancellation workflow is implemented.
+F.1 current-runner results are replaced by another validated batch; export partial/cancelled results first. In F.2, successfully completed batches are additionally added to a separate bounded experiment library, so starting another batch preserves those experiments. See `R1-statistics.md`. Browser reload can recover current progress/completed results from the same running server, although edited form values and selection may reset. Server shutdown/restart loses memory, stops the daemon worker, and does not resume interrupted work. Bounded summaries/history do not make JSON zero-cost; large exports may temporarily allocate additional memory. No batch persistence or application-exit cancellation workflow is implemented.
 
 ## HTTP endpoints
 

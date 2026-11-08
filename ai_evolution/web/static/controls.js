@@ -102,7 +102,7 @@ async function command(action, supplied = {}) {
       }
     }
     accept(await control(action, extra));
-    if (action === "reset" || action === "replay_batch") {
+    if (action === "reset" || action === "replay_batch" || action === "replay_experiment") {
       selected = ""; $("seed").value = report.seed;
       for (const [id, name] of parameterFields) $(id).value = report.parameters[name];
       $("initial-food").max = report.parameters.food_cap;
@@ -159,4 +159,5 @@ try {
 requestAnimationFrame(frame);
 
 setupBatch({pause: () => command("pause"),
-  replay: (batch_id, run_number) => command("replay_batch", {batch_id, run_number})}).catch(showError);
+  replay: (batch_id, run_number) => command("replay_batch", {batch_id, run_number}),
+  replayExperiment: (experiment_id, run_number) => command("replay_experiment", {experiment_id, run_number})}).catch(showError);

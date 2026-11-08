@@ -129,8 +129,11 @@ def execute_batch(config, limits, cancel, completed, progress):
 
 class BatchRunner:
     """One in-memory batch per application, with short-held publication locks."""
-    def __init__(self, limits=None):
+    def __init__(self, limits=None, on_complete=None):
         self.limits = limits or BatchLimits()
+        self._on_complete = on_complete
+        self._library_error = None
+        self._library_id = None
         self._lock = Lock()
         self._cancel = Event()
         self._thread = None
@@ -152,6 +155,8 @@ class BatchRunner:
             self._results = []
             self._current = None
             self._error = None
+            self._library_error = None
+            self._library_id = None
             self._cancel = Event()
             self._thread = Thread(target=self._work, daemon=True, name="r1-batch")
             self._thread.start()
@@ -167,8 +172,23 @@ class BatchRunner:
         try:
             execute_batch(self._config, self.limits, self._cancel, completed, progress)
             with self._lock:
-                self._status = "completed" if len(self._results) == self._config.runs else "cancelled"
+                outcome = "completed" if len(self._results) == self._config.runs else "cancelled"
                 self._current = None
+                completed_data = {**self._status_report(), "status": outcome, "schema_version": 1,
+                                  "engine_version": __version__, "python_version": platform.python_version(),
+                                  "limits": asdict(self.limits), "results": list(self._results)}
+            completed_data.pop("library_id")
+            completed_data.pop("library_error")
+            if outcome == "completed" and self._on_complete is not None:
+                try:
+                    saved = self._on_complete(completed_data)
+                    with self._lock:
+                        self._library_id = saved["id"]
+                except ValueError as error:
+                    with self._lock:
+                        self._library_error = str(error)
+            with self._lock:
+                self._status = outcome
         except Exception as error:
             with self._lock:
                 self._status = "failed"
@@ -195,6 +215,7 @@ class BatchRunner:
                 "configuration": asdict(self._config) if self._config else None,
                 "completed_runs": len(self._results), "total_runs": self._config.runs if self._config else 0,
                 "summary": aggregate(self._results), "error": self._error,
+                "library_id": self._library_id, "library_error": self._library_error,
                 "runs": [{"run_number": row["run_number"], "seed": row["seed"],
                           "stop_reason": row["stop_reason"], "final_time": row["final_time"],
                           "final_population": row["final_statistics"]["population"]} for row in self._results]}
@@ -209,7 +230,10 @@ class BatchRunner:
     def export(self, batch_id):
         with self._lock:
             self._check_id(batch_id)
-            return {**deepcopy(self._status_report()), "schema_version": 1,
+            metadata = self._status_report()
+            metadata.pop("library_id")
+            metadata.pop("library_error")
+            return {**deepcopy(metadata), "schema_version": 1,
                     "engine_version": __version__, "python_version": platform.python_version(),
                     "limits": asdict(self.limits), "results": deepcopy(self._results)}
 

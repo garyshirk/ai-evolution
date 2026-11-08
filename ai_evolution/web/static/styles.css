@@ -57,3 +57,14 @@ fieldset { border: 1px solid #b5c5bc; border-radius: 5px; min-width: 0; }
 #batch-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 #batch-progress-bar { width: min(100%, 600px); }
 #batch-error { color: #923817; }
+
+#results-view, #compare-view { padding: 12px 0; }
+.science-help { margin: 12px 0; max-width: 1000px; font-size: 13px; }
+.application-tabs [aria-pressed="true"] { background: #245d4b; color: white; }
+.table-scroll { overflow: auto; max-width: 100%; margin: 14px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th, td { text-align: left; border-bottom: 1px solid #cbd6cc; padding: 8px; vertical-align: top; overflow-wrap: anywhere; }
+tr.different { background: #fff0ce; }
+.aggregate-box { max-width: 1000px; aspect-ratio: 2.8; min-height: 200px; }
+#experiment-error { color: #923817; }
+#experiment-counts, #comparison-counts { max-height: 250px; overflow: auto; }

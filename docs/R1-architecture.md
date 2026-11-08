@@ -1,7 +1,7 @@
 # R1 software architecture
 
 Date: November 4, 2026  
-Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A through E and F.1 are authorized; F.2–F.5 require separate authorization.
+Status: Approved architecture, including final meal, competition, and non-collision conventions. Milestones A through E, F.1 and F.2 are authorized; F.3–F.5 require separate authorization.
 
 ## 1. Scope and decision authority
 
@@ -310,7 +310,7 @@ Planned commands after implementation:
 5. **Experiment reporting:** advanced controls, charts, exports, trait spreads/histograms, API replay tests and manual browser smoke test.
 6. **Calibration and acceptance:** multi-seed reports, performance measurements, late-run checks, documented baseline and limitations.
 
-Keep every stage runnable and testable. Milestones A through E and F.1 are authorized. Do not begin F.2–F.5 without authorization.
+Keep every stage runnable and testable. Milestones A through E, F.1 and F.2 are authorized. Do not begin F.3–F.5 without authorization.
 
 Milestone B implementation note: random search uses an analytic axis-folding calculation for reflected endpoints and outgoing headings, supporting multiple wall hits per tick. No swept encounters or interactions are implemented yet. Browser playback requests explicit bounded batches through the Flask adapter; it does not introduce a second physics loop. Canvas displays authoritative snapshots without interpolation. The server has no autonomous stepping thread, so only accepted advance/single-step requests move simulated time.
 
@@ -348,3 +348,6 @@ Milestone E final reporting refinements: the Canvas scatter plot reuses paired t
 
 
 Milestone F.1 adds a sequential batch runner in `experiments/r1/batch.py`, independent of Flask and animation. One daemon thread per application executes at most one batch at a time; each seed owns a separate engine and RNG. Locks protect progress/result publication, not physics execution, and cancellation is checked between ticks. Completed aggregate results/histories remain in memory and can be exported or replayed through the existing single-run controller. The two-tab UI reuses Canvas history rendering and SimulationConfig validation/defaults. See `R1-batch.md` for limits, denominators, replay, API and lifecycle details. No calibration, biological changes, multiprocessing, database, or F.2–F.5 features are included.
+
+
+Milestone F.2 separates experiment ownership/import validation (`library.py`), reusable descriptive analysis (`statistics.py`), and browser rendering (`experiments.js`, `statistical-chart.js`). One bounded in-memory library per Flask application retains references to immutable completed reports; derived statistics/trajectories are computed once on ingestion, without model/RNG access. Only metadata is polled; selected summaries/history are fetched on demand. F.1 export schema 1 remains unchanged. Imported full configurations can replay through the existing single-run controller after explicit release/runtime compatibility checks. Canvas mean/percentile envelopes and time-index count sliders avoid large DOM graphs. See `R1-statistics.md` for scientific definitions, limits and compatibility policy. No F.3–F.5 features or biological changes are included.

@@ -9,7 +9,7 @@
 </head>
 <body>
   <header><div class="eyebrow">AI EVOLUTION / EXPERIMENT 01</div><h1>A world in motion</h1>
-    <p>R1 · Milestone F.1 — batch experiments with Milestone E reporting.</p></header>
+    <p>R1 · Milestone F.2 — statistical analysis with Milestone E reporting.</p></header>
   <div class="application-body">
     <nav class="application-tabs" role="tablist" aria-label="Simulation mode">
       <button id="single-tab" role="tab" aria-selected="true" aria-controls="single-panel">Single Simulation</button>
@@ -71,7 +71,13 @@
   </main>
   <section id="batch-panel" role="tabpanel" aria-labelledby="batch-tab" hidden>
     <h2>Batch Experiments</h2>
-    <p class="hint">Independent sequential R1 runs without animation. A new batch replaces previous batch results in memory; export them first. Switching tabs preserves results.</p>
+    <nav class="application-tabs" aria-label="Batch views">
+      <button id="view-run" aria-pressed="true">Run</button><button id="view-results" aria-pressed="false">Results</button><button id="view-compare" aria-pressed="false">Compare</button>
+    </nav>
+    <details class="science-help"><summary>Scientific interpretation and limitations</summary><p>Each completed simulation is one replicate. Trait changes and clusters do not prove natural selection: mutation, genetic drift, bottlenecks, population composition and survivorship can affect them. Batch differences can reflect stochastic variability. Multiple changed parameters do not isolate a cause. Matched seeds do not guarantee identical random-event sequences. These descriptive summaries and 10th–90th percentile bands are not significance tests or confidence intervals. Offspring counts are not definitive fitness measures.</p></details>
+    <p id="experiment-error" role="alert" hidden></p>
+    <div id="run-view">
+    <p class="hint">Independent sequential R1 runs without animation. Completed batches are added to Results automatically. Current-batch partial results remain here; export partial results before starting another batch. The experiment library remains available across batches.</p>
     <form id="batch-form">
       <fieldset id="batch-fields"><legend>Experiment configuration</legend>
         <div id="batch-settings" class="batch-fields"></div>
@@ -95,6 +101,49 @@
         <figure><figcaption>Living population · organisms</figcaption><div class="chart-box"><canvas class="report-chart" id="batch-population" role="img" aria-label="Selected run population history"></canvas></div></figure>
         <figure><figcaption>Mean inherited maximum speed</figcaption><div class="chart-box"><canvas class="report-chart" id="batch-speed" role="img" aria-label="Selected run mean speed history"></canvas></div></figure>
         <figure><figcaption>Mean inherited vision radius</figcaption><div class="chart-box"><canvas class="report-chart" id="batch-vision" role="img" aria-label="Selected run mean vision history"></canvas></div></figure>
+      </div>
+    </section>
+    </div>
+    <section id="results-view" hidden>
+      <h3>Experiment library</h3>
+      <p class="hint">Temporary server memory: up to 8 experiments and 1,000,000 samples. Import limit 256 MiB per file. Export files for permanent storage; server restart clears the library. Imports do not rerun simulations.</p>
+      <div class="toolbar"><label>Import F.1 batch JSON <input id="experiment-file" type="file" accept=".json,application/json" multiple></label><button id="experiment-import">Import</button></div>
+      <label>Experiment <select id="experiment-select"><option value="">Select an experiment</option></select></label>
+      <div id="experiment-content" hidden>
+        <p id="experiment-info"></p>
+        <div class="toolbar"><label>Experiment name <input id="experiment-name" maxlength="120"></label><button id="experiment-rename">Rename</button><button id="experiment-remove">Remove</button><button id="experiment-export">Export Experiment JSON</button></div>
+        <div id="experiment-statistics"></div>
+        <details><summary>Observed per-run minimum populations</summary><div id="experiment-minima"></div></details>
+        <label>Aggregate metric <select id="experiment-metric"><option value="population">Population · living organisms</option><option value="speed">Mean inherited maximum speed · distance/time</option><option value="vision">Mean inherited vision radius · distance</option></select></label>
+        <p id="experiment-trajectory-note" class="hint"></p>
+        <figure><figcaption>Across-run mean (line) and 10th–90th percentiles (shading)</figcaption><div class="chart-box aggregate-box"><canvas id="experiment-chart" class="report-chart" role="img" aria-label="Experiment aggregate trajectory"></canvas></div></figure>
+        <details><summary>Contributing run counts by recorded time</summary><div id="experiment-counts"></div></details>
+        <label>Individual run <select id="experiment-run"></select></label>
+        <section id="experiment-run-detail" hidden>
+          <h4 id="experiment-run-title"></h4><button id="experiment-replay">Open in Single Simulation</button><p id="experiment-replay-note" class="hint"></p>
+          <dl id="experiment-run-stats"></dl><details><summary>Run configuration</summary><pre id="experiment-run-config"></pre></details>
+          <div class="batch-charts">
+            <figure><figcaption>Living population</figcaption><div class="chart-box"><canvas id="experiment-run-population" class="report-chart" role="img" aria-label="Individual population history"></canvas></div></figure>
+            <figure><figcaption>Mean inherited maximum speed</figcaption><div class="chart-box"><canvas id="experiment-run-speed" class="report-chart" role="img" aria-label="Individual speed history"></canvas></div></figure>
+            <figure><figcaption>Mean inherited vision radius</figcaption><div class="chart-box"><canvas id="experiment-run-vision" class="report-chart" role="img" aria-label="Individual vision history"></canvas></div></figure>
+          </div>
+        </section>
+      </div>
+    </section>
+    <section id="compare-view" hidden>
+      <h3>Compare experiments</h3>
+      <div class="toolbar"><label>Experiment A <select id="compare-a"></select></label><label>Experiment B <select id="compare-b"></select></label><button id="compare-show">Compare</button></div>
+      <div id="comparison-content" hidden>
+        <p id="comparison-warnings" class="hint"></p>
+        <h4>Configurations (different values highlighted)</h4><div id="comparison-config"></div>
+        <h4>Across-run descriptive statistics</h4><div id="comparison-statistics"></div>
+        <h4>Absolute differences and percentage changes</h4><div id="comparison-differences"></div>
+        <h4>Paired-seed B − A differences</h4><p id="comparison-paired-note" class="hint"></p><div id="comparison-paired"></div>
+        <details><summary>Per-seed differences</summary><div id="comparison-pairs"></div></details>
+        <label>Comparison metric <select id="comparison-metric"><option value="population">Population · living organisms</option><option value="speed">Mean inherited maximum speed · distance/time</option><option value="vision">Mean inherited vision radius · distance</option></select></label>
+        <p id="comparison-legend"></p><p id="comparison-trajectory-note" class="hint"></p>
+        <figure><figcaption>Means and 10th–90th percentile bands; common recorded time axis</figcaption><div class="chart-box aggregate-box"><canvas id="comparison-chart" class="report-chart" role="img" aria-label="Experiment comparison trajectories"></canvas></div></figure>
+        <details><summary>Contributing run counts by recorded time</summary><div id="comparison-counts"></div></details>
       </div>
     </section>
   </section>
