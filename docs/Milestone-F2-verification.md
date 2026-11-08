@@ -61,3 +61,10 @@ The illustrative 50-run × 2,000-unit food-8/food-1 acceptance experiment was no
 See `R1-statistics.md` for precise formulas and policy. The library is temporary server memory; files are permanent storage. Limits are 8 experiments, 1,000,000 retained samples and 256 MiB per request/file. Incompatible or incomplete schedules disable aggregate trajectories rather than interpolate. Bottleneck percentages use only runs with post-initial observations and expose missing-observation counts; sampled minima can miss transient events. Trait statistics/bands condition on survival.
 
 Replay permits known unchanged-model releases 0.6.0/0.7.0 with the exact same Python version; other data remains analyzable. This is conservative runtime compatibility, not a cross-platform bit-identity guarantee. The model, biological defaults, RNG and simulation steps were not modified. F.2 remains uncommitted and unpushed for review.
+
+## Post-F.2 Repository Workflow Verification
+
+November 8, 2026: A post-F.2 workflow smoke test confirmed access to `/Users/garyshirk/Projects/ai-evolution`.
+Verified the GitHub remote `https://github.com/garyshirk/ai-evolution.git` and synchronized `main` after fetching.
+Confirmed that F.2 commit `ec051c855bd496da631815fc5fedfb3c771d2220` remained in branch history.
+This documentation-only update was committed and pushed to verify the existing development workflow.
