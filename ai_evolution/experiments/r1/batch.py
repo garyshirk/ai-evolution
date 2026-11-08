@@ -11,6 +11,7 @@ from uuid import uuid4
 from ... import __version__
 from .config import SimulationConfig
 from .exports import experiment_report
+from .metrics import MetricsCollector
 from .simulation import Simulation
 
 
@@ -55,7 +56,8 @@ class BatchConfig:
             raise ValueError("duration must be a whole number of simulation ticks (dt)")
         if self.simulation.initial_population > limits.max_initial_population or self.simulation.food_cap > limits.max_food_cap:
             raise ValueError("Initial population or food cap exceeds batch resource limits")
-        if self.runs * min(10001, steps + 2) > limits.max_retained_samples:
+        measurements = MetricsCollector(self.simulation.dt).retained_measurement_bound(steps)
+        if self.runs * measurements > limits.max_retained_samples:
             raise ValueError("Requested retained measurement workload exceeds batch limits")
         return steps
 

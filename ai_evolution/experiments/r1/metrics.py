@@ -9,6 +9,10 @@ from .config import SimulationConfig
 from .models import WorldState
 
 
+DEFAULT_SAMPLING_INTERVAL = 1.0
+DEFAULT_HISTORY_LIMIT = 10000
+
+
 @dataclass(frozen=True, slots=True)
 class MetricSample:
     sequence: int | None
@@ -81,7 +85,8 @@ class MetricsCollector:
     rounds the requested interval up to whole ticks; it never splits physics or
     invents interpolated biological states. Default dt=0.1 samples exactly at 1.
     """
-    def __init__(self, dt: float, *, interval: float = 1.0, history_limit: int = 10000):
+    def __init__(self, dt: float, *, interval: float = DEFAULT_SAMPLING_INTERVAL,
+                 history_limit: int = DEFAULT_HISTORY_LIMIT):
         if type(dt) not in (float, int) or not math.isfinite(dt) or dt <= 0:
             raise ValueError("Metrics dt must be finite and positive")
         if type(interval) not in (float, int) or not math.isfinite(interval) or interval <= 0:
@@ -95,6 +100,20 @@ class MetricsCollector:
         self._initial: MetricSample | None = None
         self._recent: deque[MetricSample] = deque(maxlen=history_limit - 1)
         self.total_samples = 0
+
+    def retained_measurement_bound(self, steps: int) -> int:
+        """Bound retained/exported rows through at most ``steps`` physics ticks.
+
+        Count initialization and scheduled samples using this collector's cadence.
+        A terminal sample replaces a scheduled sample on a sampling tick, or adds
+        one between sampling ticks. A surviving off-grid final view is likewise
+        exported once, outside the collector's retention window. Earlier terminal
+        states cannot exceed this bound; an initially empty run needs just one row.
+        """
+        if type(steps) is not int or steps < 0:
+            raise ValueError("Measurement bound steps must be a nonnegative integer")
+        periodic, remainder = divmod(steps, self.every_steps)
+        return min(self.history_limit, 1 + periodic) + int(remainder != 0)
 
     @property
     def latest(self) -> MetricSample | None:

@@ -29,7 +29,9 @@ Default BatchLimits:
 | Living population guard | 10,000 |
 | Archived death-record guard per run | 100,000 |
 
-The measurement estimate uses runs × min(10,001, requested ticks + 2), conservatively allowing an extra export endpoint. Each run inherits the Milestone E retention policy (initial plus latest 9,999 recorded samples), with an optional current final endpoint. Dropped history and sequence gaps remain explicit.
+The measurement estimate uses MetricsCollector's actual cadence and retention defaults, shared with Simulation. With N requested ticks and K ticks per sample, the per-run bound is `min(history_limit, 1 + floor(N / K)) + (1 if N % K else 0)`. This counts initialization and periodic samples, plus a possible terminal/current endpoint between sampling ticks. A terminal endpoint on a scheduled tick replaces that sample rather than adding another; earlier extinction cannot exceed the bound. Each run inherits the Milestone E retention policy (initial plus latest 9,999 recorded samples), with an optional current final endpoint outside that window. Dropped history and sequence gaps remain explicit.
+
+For 50 runs of duration 2,000 with dt 0.1, N=20,000 and K=10. The estimate is 50 × 2,001 = **100,050 retained measurements**, within the unchanged 500,000 limit. The previous tick-based estimate incorrectly rejected this configuration at 500,050. Measurement interval, retention defaults, physics tick limits and biological rules are unchanged.
 
 Limits can be configured programmatically with `create_app(batch_limits=BatchLimits(...))`; they are execution safeguards, not biological defaults. Settings returned to the UI reflect those limits. Runtime population/death-record guards are inspected every 20 ticks and at completion; if exceeded, the batch becomes failed, retains completed runs and reports the reason. The current run is omitted. The guards never cull organisms or alter energy/reproduction.
 

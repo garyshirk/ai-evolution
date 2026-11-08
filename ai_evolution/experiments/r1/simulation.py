@@ -9,12 +9,13 @@ from .models import Food, Organism, Position, Traits, WorldState
 from .encounters import resolve_tick
 from .resources import next_arrival
 from .reproduction import reproduce
-from .metrics import MetricsCollector, measure
+from .metrics import DEFAULT_HISTORY_LIMIT, DEFAULT_SAMPLING_INTERVAL, MetricsCollector, measure
 
 
 class Simulation:
     def __init__(self, config: SimulationConfig | None = None, *, seed: int = 0,
-                 collect_metrics: bool = True, sampling_interval: float = 1.0, history_limit: int = 10000):
+                 collect_metrics: bool = True, sampling_interval: float = DEFAULT_SAMPLING_INTERVAL,
+                 history_limit: int = DEFAULT_HISTORY_LIMIT):
         if type(seed) is not int:
             raise ValueError("seed must be an integer")
         if config is not None and not isinstance(config, SimulationConfig):
