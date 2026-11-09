@@ -50,7 +50,7 @@ class FractionalFoodTests(unittest.TestCase):
                 for seed in range(10):
                     config = SimulationConfig(
                         initial_population=1, initial_food=0, food_spawn_rate=rate,
-                        food_cap=2000, dt=10, max_lifespan=2000,
+                        food_cap=2000, dt=10, max_lifespan=2000, founder_age_mode="zero",
                         baseline_cost=0, vision_cost=0, movement_cost=0,
                         search_speed_fraction=0, reproduction_threshold=1e9,
                     )

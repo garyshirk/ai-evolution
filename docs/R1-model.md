@@ -95,3 +95,12 @@ The simple resolver scans candidate organisms and foods, with an exact segment-b
 ## Milestone scope
 
 Defaults remain the architecture's starting values. No calibration has been attempted, no population is artificially stabilized, and no food/energy rescue rule exists. Descendants may survive after the founders' lifespan, but persistence is not guaranteed. Only initial smoke observations are reported, not the later multi-seed 1,000-unit calibration target. Milestone E adds descriptive evolutionary charts and exports, documented in `R1-reporting.md`. No explicit fitness score, social behavior, or LLM agents are implemented.
+
+
+## Founder-age initialization refinement (0.8.0, before F.3)
+
+Newly configured experiments default to `founder_age_mode="uniform"`: each founder receives a seeded uniform initial age in [0, max_lifespan), represented by birth_time = −initial_age with simulation time still zero. `founder_age_mode="zero"` reproduces the original synchronized all-age-zero cohort. Founder lineage, generation zero, initial energy and all non-age initial conditions are unchanged. There are no retroactive upkeep costs, births, death records, or reconstructed prehistory. Newborns retain their existing birth-time/age-zero rule.
+
+A separate `random.Random("ai-evolution:r1:founder-ages:v1:" + str(seed))` supplies founder ages in canonical ID order, with U × max_lifespan and a nextafter guard against floating rounding to the excluded maximum. It neither seeds nor draws from the existing biological/global generator. Reset recreates the same age stream; matched seeds across other configurations share the same age fractions. Legacy mode consumes no age draws, and its full approved state/RNG trajectory is regression-tested. Once different remaining lifetimes affect events, biological RNG sequences can diverge naturally.
+
+The existing deadline birth_time + max_lifespan is unchanged, so random initial ages stagger remaining lifetimes rather than changing mortality. Random initial ages are independent of traits and do not imply an equilibrium or previously selected population. Older saved batch files without the new field import as zero-age founders. See `R1-founder-ages.md` for exact compatibility rules and limitations.

@@ -11,12 +11,15 @@ export async function setupBatch({pause, replay, replayExperiment}) {
   let status, selectedRun = null, loading = false, selectedBatch = null;
   const settings = await request("/api/batch/settings");
   const integers = new Set(settings.integer_parameters);
-  const primary = new Set(["initial_population", "initial_food", "food_spawn_rate", "movement_cost", "vision_cost",
+  const primary = new Set(["founder_age_mode", "initial_population", "initial_food", "food_spawn_rate", "movement_cost", "vision_cost",
     "speed_mutation_probability", "vision_mutation_probability", "speed_mutation_magnitude", "vision_mutation_magnitude"]);
   const inputs = new Map();
   function input(name, value, parent, integer = false) {
-    const wrapper = document.createElement("label"), field = document.createElement("input");
-    wrapper.textContent = label(name); field.type = "number"; field.step = integer ? "1" : "any";
+    const wrapper = document.createElement("label"), field = document.createElement(name === "founder_age_mode" ? "select" : "input");
+    wrapper.textContent = name === "founder_age_mode" ? "Founder ages" : label(name);
+    if (name === "founder_age_mode") {
+      field.append(new Option("Randomized (uniform)", "uniform"), new Option("All zero (legacy)", "zero"));
+    } else { field.type = "number"; field.step = integer ? "1" : "any"; }
     field.id = `batch-${name}`; field.value = value; field.required = true;
     if (name !== "starting_seed") field.min = "0";
     wrapper.append(field); $(parent).append(wrapper); inputs.set(name, field);
@@ -130,6 +133,7 @@ export async function setupBatch({pause, replay, replayExperiment}) {
     event.preventDefault(); $("batch-run").disabled = true;
     try {
       const values = Object.fromEntries([...inputs].map(([key, input]) => {
+        if (key === "founder_age_mode") return [key, input.value];
         const value = Number(input.value);
         if (!input.value.trim() || !Number.isFinite(value)) throw new Error(`Enter a finite ${label(key)}.`);
         if ((integers.has(key) || ["runs", "starting_seed"].includes(key)) && !Number.isSafeInteger(value)) throw new Error(`${label(key)} must be a safe integer.`);

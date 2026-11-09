@@ -14,7 +14,7 @@ from ai_evolution.web.app import create_app
 
 
 def laboratory(**changes):
-    values = dict(initial_population=1, initial_food=0, food_spawn_rate=0,
+    values = dict(founder_age_mode="zero", initial_population=1, initial_food=0, food_spawn_rate=0,
                   baseline_cost=0, vision_cost=0, movement_cost=0,
                   search_speed_fraction=0, starting_energy=100,
                   speed_mutation_probability=0, vision_mutation_probability=0)

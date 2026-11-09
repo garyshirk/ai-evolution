@@ -1,6 +1,6 @@
 """Bounded, process-memory experiment library and strict F.1 export validation."""
 
-from dataclasses import fields
+from dataclasses import asdict, fields
 import math
 import platform
 from threading import Lock
@@ -14,7 +14,7 @@ from .statistics import close_time, compare_experiments, experiment_statistics, 
 MAX_IMPORT_BYTES = 256 * 1024 * 1024
 MAX_EXPERIMENTS = 8
 MAX_LIBRARY_SAMPLES = 1000000
-REPLAY_VERSIONS = {"0.6.0", "0.7.0"}  # Reporting-only release changes; unchanged R1 model.
+REPLAY_VERSIONS = {"0.6.0", "0.7.0", "0.8.0"}  # Earlier releases replay with zero-age founders only.
 
 
 def require(condition, message):
@@ -43,9 +43,11 @@ def validate_batch(data):
     require(number(config.get("duration")) and 0 < config["duration"] <= 1000000, "Invalid planned duration.")
     require(type(config.get("starting_seed")) is int and -(2**53 - 1) <= config["starting_seed"] <= 2**53 - config["runs"], "Invalid consecutive seed range.")
     parameters = config.get("simulation")
-    require(isinstance(parameters, dict) and set(parameters) == set(SimulationConfig.__dataclass_fields__), "Complete R1 simulation configuration is required.")
+    expected_fields = set(SimulationConfig.__dataclass_fields__)
+    require(isinstance(parameters, dict) and set(parameters) in (expected_fields, expected_fields - {"founder_age_mode"}), "Complete R1 simulation configuration is required.")
+    require(data["engine_version"] != "0.8.0" or "founder_age_mode" in parameters, "Engine 0.8.0 exports must specify founder_age_mode.")
     try:
-        model = SimulationConfig(**parameters)
+        model = SimulationConfig.from_export(parameters)
     except (ValueError, TypeError) as error:
         raise ValueError(f"Invalid R1 configuration: {error}") from error
     require(model.speed_max <= 1e6 and model.vision_max <= 1e6, "Imported trait bounds exceed analysis limits.")
@@ -60,11 +62,14 @@ def validate_batch(data):
         require(isinstance(run, dict), prefix + "result must be an object.")
         require(run.get("experiment") == "R1" and run.get("schema_version") == 1, prefix + "expected an R1 schema 1 run.")
         require(type(run.get("run_number")) is int and run["run_number"] == index + 1 and type(run.get("seed")) is int and run["seed"] == config["starting_seed"] + index, prefix + "run number or consecutive seed is inconsistent.")
-        require(run.get("configuration") == parameters, prefix + "configuration differs from batch.")
+        saved_parameters = run.get("configuration")
+        require(isinstance(saved_parameters, dict) and set(saved_parameters) in (expected_fields, expected_fields - {"founder_age_mode"}), prefix + "complete run configuration is required.")
+        require(data["engine_version"] != "0.8.0" or "founder_age_mode" in saved_parameters, prefix + "missing founder_age_mode.")
         try:
-            SimulationConfig(**run["configuration"])
+            saved_model = SimulationConfig.from_export(saved_parameters)
         except (TypeError, ValueError) as error:
             raise ValueError(prefix + f"invalid run configuration: {error}") from error
+        require(saved_model == model, prefix + "configuration differs from batch.")
         require(run.get("engine_version") == data["engine_version"] and run.get("python_version") == data["python_version"], prefix + "version metadata differs from batch.")
         require(type(run.get("survived")) is bool and type(run.get("is_terminal")) is bool and run["survived"] != run["is_terminal"], prefix + "invalid survival/terminal status.")
         require(run.get("stop_reason") == ("duration" if run["survived"] else "extinction"), prefix + "stop reason is inconsistent.")
@@ -118,7 +123,10 @@ def validate_batch(data):
 
 def replay_issue(run):
     if run["engine_version"] not in REPLAY_VERSIONS:
-        return f"Replay unsupported for engine {run['engine_version']}; supported unchanged-model releases: {', '.join(sorted(REPLAY_VERSIONS))}. Analysis remains available."
+        return f"Replay unsupported for engine {run['engine_version']}; supported releases: {', '.join(sorted(REPLAY_VERSIONS))}. Analysis remains available."
+    mode = run["configuration"].get("founder_age_mode", "zero")
+    if run["engine_version"] in ("0.6.0", "0.7.0") and mode != "zero":
+        return "Earlier engines support only all-zero founder ages; this configuration cannot be replayed exactly."
     if run["python_version"] != platform.python_version():
         return f"Exact replay requires Python {run['python_version']}; this server uses {platform.python_version()}. Analysis remains available."
     return None
@@ -135,6 +143,13 @@ class ExperimentLibrary:
         with self._lock:
             require(len(self._entries) < MAX_EXPERIMENTS, "Experiment library is full. Export and remove an experiment first.")
         sample_count = validate_batch(data)
+        # Normalize only small configuration dictionaries; share large histories.
+        if "founder_age_mode" not in data["configuration"]["simulation"] or any(
+                "founder_age_mode" not in run["configuration"] for run in data["results"]):
+            data = {**data, "configuration": {**data["configuration"],
+                    "simulation": asdict(SimulationConfig.from_export(data["configuration"]["simulation"]))},
+                    "results": [{**run, "configuration": asdict(SimulationConfig.from_export(run["configuration"]))}
+                                for run in data["results"]]}
         analysis, history = experiment_statistics(data), trajectories(data)
         entry = {"id": uuid4().hex, "name": name, "data": data,
                  "statistics": analysis, "trajectories": history, "samples": sample_count}

@@ -40,6 +40,12 @@ class SimulationConfig:
     vision_mutation_probability: float = 0.05
     speed_mutation_magnitude: float = 0.05
     vision_mutation_magnitude: float = 0.05
+    founder_age_mode: str = "uniform"
+
+    @classmethod
+    def from_export(cls, values):
+        """Saved configurations predating founder ages always mean age zero."""
+        return cls(**{"founder_age_mode": "zero", **values})
 
     def __post_init__(self) -> None:
         counts = {"initial_population", "initial_food", "food_cap"}
@@ -55,6 +61,10 @@ class SimulationConfig:
         for field in fields(self):
             name = field.name
             value = getattr(self, name)
+            if name == "founder_age_mode":
+                if type(value) is not str or value not in ("uniform", "zero"):
+                    raise ValueError("founder_age_mode must be uniform or zero")
+                continue
             if name in counts:
                 if type(value) is not int or value < 0:
                     raise ValueError(f"{name} must be a nonnegative integer")

@@ -20,7 +20,7 @@ from ai_evolution.web.app import create_app
 
 
 def quiet_config(**values):
-    settings = dict(initial_population=1, initial_food=0, food_spawn_rate=0, baseline_cost=0,
+    settings = dict(founder_age_mode="zero", initial_population=1, initial_food=0, food_spawn_rate=0, baseline_cost=0,
                     vision_cost=0, movement_cost=0, search_speed_fraction=0, max_lifespan=1e9)
     settings.update(values)
     return SimulationConfig(**settings)

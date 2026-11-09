@@ -2,11 +2,11 @@
 
 A laboratory for independent, agent-based evolutionary experiments. The simulation engine is Python; Flask and Canvas provide a local browser interface. Organisms are simple rule-based software entities, with no LLM agents.
 
-## Current release: R1, Milestone F.2
+## Current release: R1, F.2 with founder-age refinement (0.8.0)
 
 Implemented: seeded initialization, fixed decision ticks, search and pursuit, full-path food competition, continuous energy costs, Poisson replenishment, starvation/age death, asexual reproduction, trait inheritance and mutation, and browser controls and inspection.
 
-Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Milestone E adds descriptive evolutionary charts and exports. Milestone F.1 adds sequential batch experiments; F.2 adds an experiment library, descriptive statistics, aggregate trajectories and paired-seed comparisons; F.3–F.5 remain unimplemented. Starting defaults have only undergone smoke testing.
+Population can grow through births and decline through deaths. Evolutionary differences arise from inherited speed/vision, resource access, survival, and reproduction; no fitness score or guaranteed survival is imposed. Milestone E adds descriptive evolutionary charts and exports. Milestone F.1 adds sequential batch experiments; F.2 adds an experiment library, descriptive statistics, aggregate trajectories and paired-seed comparisons; F.3–F.5 remain unimplemented. Starting settings have not undergone F.5 calibration.
 
 ## Launch locally
 
@@ -28,6 +28,7 @@ Flask and its dependencies are already installed. To recreate the tested environ
 
 - Start/Resume runs the current experiment; Pause drains the current short batch and preserves state. Single step advances one decision tick, including all continuous events inside it.
 - Reset rebuilds the experiment. Seed, food rate, movement coefficient, and vision coefficient edits take effect only on Reset. Start/Resume never silently applies pending model edits.
+- **Founder ages** offers Randomized (uniform, default for new experiments) or All zero (legacy). It applies only on Reset. Randomized ages span [0, maximum lifespan), using a separate seeded stream so positions, traits, food and initial biological RNG state match the legacy mode. Offspring still start at age zero.
 - **Initial Population** defaults to 50, accepts nonnegative integers, and applies on Reset. It uses the same configurable initial-population limit as batch execution (500 by default). Opening a batch replay fills this field from that run; exports record the applied population. Zero starts an extinct world.
 - Advanced also provides **Initial Food**, a nonnegative integer no greater than the configured food cap (default 500). It defaults to 200 and is independent of the replenishment rate, which still defaults to 8. For scarcity, set Initial Food to 10 and Food / time to 0.1, then Reset. Zero initial food and zero replenishment are supported independently.
 - Food / time accepts fractional rates such as 0.05, 0.1, 0.5, and 1.0. Its spinner increment is 0.5, but manually typed rates are validated as finite nonnegative numbers rather than restricted to spinner multiples.
@@ -72,14 +73,25 @@ Results shows across-run means, sample SD (N−1), medians and ranges for final 
 
 Compare selects exactly two experiments. It highlights all configuration differences, shows side-by-side statistics and B−A differences/percentage changes, and enables paired differences only for identical completed seed sets (trait pairs require survival in both). Equal durations and compatible recorded time axes are required for overlaid trajectories. Different final endpoints and multiple changed parameters trigger warnings. These are descriptive comparisons, not significance tests or causal conclusions.
 
-Replay supports known unchanged-model releases 0.6.0 and 0.7.0 with the same Python version. Incompatible exports can be analyzed, but their replay is disabled with a reason. The full applied configuration and seed, including Initial Population, initialize a fresh paused single run.
+Replay supports releases 0.6.0/0.7.0 in all-zero founder mode and 0.8.0 in either mode, with the same Python version. Older imported batch files missing founder_age_mode are normalized to zero so their original behavior is preserved. Incompatible exports can be analyzed, but their replay is disabled with a reason. The full applied configuration and seed, including Initial Population, initialize a fresh paused single run.
 
 See [statistical definitions and limits](docs/R1-statistics.md) and [F.2 verification checklist](docs/Milestone-F2-verification.md).
+
+## Founder-age initialization
+
+New experiments default to uniformly randomized founder ages over `[0, max_lifespan)`, reducing the artificial synchronized founder lifespan event. **All zero (legacy)** remains available in both Single Simulation and Batch Experiments for controlled comparisons. The choice is recorded as `founder_age_mode: "uniform"` or `"zero"` in full configurations and exports. Reset/replay preserves the applied choice; older imported experiment files missing this field explicitly retain zero-age founders. Freshly constructed configurations default to uniform.
+
+Founders may show negative Birth time because the simulation clock still begins at zero. Their energy remains the configured starting reserve; no pre-experiment energy use, reproduction or survival history is fabricated. Births, mortality rules, lifespan, costs and mutation are unchanged. This changes initial demographic conditions, so population histories can differ; it does not establish which initialization is scientifically preferable.
+
+Version 0.8.0 passed user manual acceptance on November 8, 2026: both founder-age modes were verified, and a randomized-age run with initial population 20 and food rate 1 showed growth, decline and eventual extinction without unexpected behavior or application errors. This confirms the feature workflow, not a causal explanation of population declines; controlled population-dynamics and carrying-capacity work remains reserved for F.5. See the verification document for details.
+
+For Python code reading saved configurations, use `SimulationConfig.from_export(saved_configuration)` to apply the legacy fallback. A direct `SimulationConfig(**parameters)` represents a newly configured experiment and uses the new default when the field is absent. See [founder-age design and compatibility](docs/R1-founder-ages.md) and [verification/manual checklist](docs/Founder-age-verification.md).
 
 ## Run headlessly
 
 ```sh
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100
+.venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --founder-age-mode zero
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --population 5 --food 0 --food-rate 0
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --movement-cost 0.1 --vision-cost 0.2
 .venv/bin/python -m ai_evolution headless --seed 42 --steps 100 --mutation-probability 0
@@ -124,7 +136,7 @@ simulation.reset()
 
 Configuration and traits are frozen dataclasses. Engine state is private; snapshots are detached deep copies. Create a new Simulation for new parameters/seed; `reset()` restores the existing seed/configuration, counters, statistics, and RNG. `step()` returns whether a tick was attempted/completed; `advance(n)` returns the number advanced, stopping at extinction. The final tick may terminate partway through: its index is counted, while `state.time` and `extinction_time` retain the exact terminal simulated time. Age is derived from simulated time or the archived death time, never browser time.
 
-One private `random.Random(seed)` drives initialization, searching, spawning, and exact conflict resolution in canonical order. Snapshot reads and browser rendering do not draw from it. Repeatability is supported for the same engine/runtime environment, seed, configuration, and step count; cross-version/platform bit identity is not promised. Food/organism IDs use separate monotonic namespaces starting at 1.
+One private `random.Random(seed)` drives non-age initialization, searching, spawning, mutation and exact conflict resolution in canonical order. Founder ages use a separate versioned, deterministic stream seeded from the same run seed. Snapshot reads and browser rendering do not draw from it. Repeatability is supported for the same engine/runtime environment, seed, configuration, and step count; cross-version/platform bit identity is not promised. Food/organism IDs use separate monotonic namespaces starting at 1.
 
 Flask 3.1.2 remains the only direct runtime dependency. `requirements.txt` records tested transitive versions; no dependency changes were needed for Milestone F.2. Experiments remain under `ai_evolution/experiments/`, independent of the web adapter.
 

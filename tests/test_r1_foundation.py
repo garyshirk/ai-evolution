@@ -87,7 +87,8 @@ class InitializationTests(unittest.TestCase):
             self.assertEqual(org.id, identifier)
             self.assertEqual(org.founder_lineage_id, identifier)
             self.assertIsNone(org.parent_id)
-            self.assertEqual((org.generation, org.birth_time, org.offspring_count), (0, 0, 0))
+            self.assertEqual((org.generation, org.offspring_count), (0, 0))
+            self.assertTrue(0 <= org.age_at(0) < simulation.config.max_lifespan)
             self.assertEqual(org.energy, 30)
             self.assertEqual(org.movement_mode, "idle")
             self.assertEqual(org.actual_speed, 0)
@@ -139,7 +140,7 @@ class InitializationTests(unittest.TestCase):
 class StateAndClockTests(unittest.TestCase):
     def test_clock_uses_tick_index_not_accumulated_time(self):
         simulation = Simulation(SimulationConfig(
-            dt=0.03, initial_population=1, initial_food=0, food_spawn_rate=0,
+            dt=0.03, founder_age_mode="zero", initial_population=1, initial_food=0, food_spawn_rate=0,
             baseline_cost=0, vision_cost=0, movement_cost=0,
             search_speed_fraction=0, max_lifespan=1e9,
         ))

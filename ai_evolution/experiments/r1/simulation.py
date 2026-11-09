@@ -42,6 +42,8 @@ class Simulation:
     def reset(self) -> None:
         """Rebuild the same initialized experiment, including RNG and IDs."""
         self._rng = random.Random(self.seed)
+        # Versioned, domain-separated seed: no draws from the biological RNG.
+        age_rng = random.Random(f"ai-evolution:r1:founder-ages:v1:{self.seed}")
         self._state = WorldState(dt=self.config.dt)
         for _ in range(self.config.initial_population):
             identifier = self._state.next_organism_id
@@ -55,11 +57,16 @@ class Simulation:
                     self.config.founder_vision_min, self.config.founder_vision_max
                 ),
             )
+            age = 0.0
+            if self.config.founder_age_mode == "uniform":
+                age = min(age_rng.random() * self.config.max_lifespan,
+                          math.nextafter(self.config.max_lifespan, 0.0))
             self._state.organisms[identifier] = Organism(
                 id=identifier, position=position, traits=traits,
                 energy=self.config.starting_energy,
                 heading=self._rng.random() * math.tau,
                 founder_lineage_id=identifier,
+                birth_time=-age if age else 0.0,
             )
             self._state.next_organism_id += 1
         for _ in range(self.config.initial_food):

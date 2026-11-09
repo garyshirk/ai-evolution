@@ -12,7 +12,7 @@ from ai_evolution.web.app import create_app
 
 
 def config(**changes):
-    values = dict(initial_population=2, initial_food=0, food_spawn_rate=0)
+    values = dict(founder_age_mode="zero", initial_population=2, initial_food=0, food_spawn_rate=0)
     values.update(changes)
     return SimulationConfig(**values)
 

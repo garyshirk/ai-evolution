@@ -10,6 +10,7 @@ const view = new WorldView($("world"), id => { selected = id; refresh(); });
 const reports = new Reports(id => { selected = String(id); refresh(); });
 const format = value => Number(value).toFixed(3);
 const parameterFields = [
+  ["founder-age-mode", "founder_age_mode"],
   ["initial-population", "initial_population"],
   ["initial-food", "initial_food"],
   ["food-rate", "food_spawn_rate"], ["movement-cost", "movement_cost"], ["vision-cost", "vision_cost"],
@@ -89,6 +90,11 @@ async function command(action, supplied = {}) {
       extra.parameters = {};
       for (const [id, name] of parameterFields) {
         const textValue = $(id).value.trim();
+        if (name === "founder_age_mode") {
+          if (!["uniform", "zero"].includes(textValue)) throw new Error("Choose randomized or all-zero founder ages.");
+          extra.parameters[name] = textValue;
+          continue;
+        }
         const value = Number(textValue);
         if (!textValue || !Number.isFinite(value) || value < 0) throw new Error("Model settings must be finite nonnegative numbers.");
         if (name.endsWith("probability") && value > 1) throw new Error("Mutation probabilities must be between 0 and 1.");

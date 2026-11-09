@@ -106,3 +106,6 @@ The array contains only living organisms and is empty at extinction. It is a cur
 
 
 For Milestone F.1 batch execution, aggregate denominators, retained run histories, and batch JSON exports, see `R1-batch.md`. The single-run export formats and biological measurements documented here are unchanged.
+
+
+The pre-F.3 founder-age refinement adds `founder_age_mode` to exported configurations (uniform for new experiments; zero for legacy cohorts). Individual ages continue to derive from simulated time minus birth_time; founders can now have negative birth timestamps while the initial measurement remains at time zero. No measurement/CSV columns or metric formulas change. Legacy batch imports supply explicit zero when the field is absent; see `R1-founder-ages.md`.

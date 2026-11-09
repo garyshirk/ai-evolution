@@ -164,7 +164,7 @@ class WebTests(unittest.TestCase):
 
     def test_extinction_pauses_preserves_records_and_stops_batch(self):
         config = SimulationConfig(initial_population=2, initial_food=0, food_spawn_rate=0,
-                                  max_lifespan=0.15)
+                                  max_lifespan=0.15, founder_age_mode="zero")
         self.client = create_app(config, seed=42).test_client()
         self.state = self.client.get("/api/state").get_json()
         self.control("start")

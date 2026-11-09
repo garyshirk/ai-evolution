@@ -251,7 +251,7 @@ def create_app(config: SimulationConfig | None = None, *, seed: int = 0, batch_l
                 if type(seed_value) is not int or abs(seed_value) > 2**53 - 1:
                     return jsonify(error="Seed must be a JavaScript-safe integer"), 400
                 updates = data.get("parameters", {})
-                allowed = {"initial_population", "initial_food", "food_spawn_rate", "movement_cost", "vision_cost",
+                allowed = {"founder_age_mode", "initial_population", "initial_food", "food_spawn_rate", "movement_cost", "vision_cost",
                            "speed_mutation_probability", "vision_mutation_probability",
                            "speed_mutation_magnitude", "vision_mutation_magnitude"}
                 if not isinstance(updates, dict) or not updates.keys() <= allowed:

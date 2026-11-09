@@ -12,7 +12,7 @@ Cancellation is checked before each run and each engine tick. It discards the un
 
 ## Inputs and workload limits
 
-Defaults: 20 runs, duration 2,000 simulated units, seed 0. Consecutive seeds are starting_seed through starting_seed + runs - 1, all JavaScript-safe integers. The browser exposes all SimulationConfig fields, with common population/food/cost/mutation controls first. Validation is authoritative on the server, using SimulationConfig plus batch-only limits. Invalid input does not replace the existing batch.
+Defaults: 20 runs, duration 2,000 simulated units, seed 0. Consecutive seeds are starting_seed through starting_seed + runs - 1, all JavaScript-safe integers. New batches default to randomized founder ages. The minimal Founder ages selector offers Randomized (uniform) or All zero (legacy), and the applied founder_age_mode is included in each full configuration. Older imported batches missing it retain zero-age founders. The browser exposes all SimulationConfig fields, with common population/food/cost/mutation controls first. Validation is authoritative on the server, using SimulationConfig plus batch-only limits. Invalid input does not replace the existing batch.
 
 Duration must be positive and align with whole engine ticks, within relative floating rounding tolerance 1e-12. A run advances that many existing fixed-duration ticks or stops earlier at exact extinction. No partial artificial tick or overshooting duration rule is added. Terminal fractional tick times remain those produced by the existing engine. Changing dt still changes the underlying approved model; reporting follows the existing tick-aligned cadence.
 

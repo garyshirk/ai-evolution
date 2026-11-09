@@ -19,6 +19,9 @@ def main(argv: list[str] | None = None) -> int:
     headless.add_argument("--seed", type=int, default=0)
     headless.add_argument("--steps", type=int, default=0)
     headless.add_argument("--population", type=int, default=50)
+    headless.add_argument("--founder-age-mode", choices=("uniform", "zero"),
+                          default=SimulationConfig().founder_age_mode,
+                          help="Uniform initial ages (default) or zero for legacy founder cohorts")
     headless.add_argument("--food", type=int, default=200)
     headless.add_argument("--dt", type=float, default=0.1)
     headless.add_argument("--food-rate", type=float, default=8.0)
@@ -40,6 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = SimulationConfig(
             initial_population=args.population, initial_food=args.food, dt=args.dt,
+            founder_age_mode=args.founder_age_mode,
             food_spawn_rate=args.food_rate, movement_cost=args.movement_cost, vision_cost=args.vision_cost,
             speed_mutation_probability=args.mutation_probability, vision_mutation_probability=args.mutation_probability,
             speed_mutation_magnitude=args.mutation_magnitude, vision_mutation_magnitude=args.mutation_magnitude,
